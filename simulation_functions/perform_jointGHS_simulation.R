@@ -1,5 +1,5 @@
-library(jointGHS)
-library(fastGHS)
+library(jointGHS) # Must be installed from Camiling/jointGHS
+library(fastGHS) # Must be installed from Camiling/fastGHS
 library(tailoredGlasso)
 library(huge)
 library(glasso)
@@ -11,7 +11,6 @@ library(doParallel)
 library(foreach)
 library(parallel)
 library(Rcpp)
-#source('simulation_functions/help_functions.R')
 
 #' Perform jointGHS simulations
 #' 
@@ -93,12 +92,10 @@ perform_jointGHS_simulation = function(K, n.vals, p, N=100, seeds=sample(1:1000,
     prec.matrices[[K]] = huge.tmp$prec.mat
   }
   #registerDoParallel(nCores)
-  print('before')
   res.list = foreach (i=1:N) %dopar% {
     jointGHS_simulation_one_iteration(n.vals=n.vals,cov.matrices=cov.matrices,prec.matrices=prec.matrices,scale=scale,
                                      ebic.gamma=ebic.gamma,tau_sq = tau_sq, tau_sq_ghs=tau_sq_ghs,penalize.diagonal=penalize.diagonal,seed=seeds[i]);
   }
-  print('after')
   #registerDoSEQ()
   for(i in 1:N){
     est.tmp = res.list[[i]]

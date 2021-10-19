@@ -1,8 +1,8 @@
 source('simulation_functions/perform_jointGHS_simulation.R')
 source('simulation_functions/help_functions.R')
 
-nCores = 56
-registerDoParallel(nCores)
+nCores = 56 # If ran on HPC
+registerDoParallel(nCores) # Moved to outside of function, after Colin's suggestion
 
 # Perform simulation study
 
