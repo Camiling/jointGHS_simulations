@@ -31,9 +31,9 @@ mutate.graph= function(graph,fraction){
   # Mutate a given fraction of the edges of a graph. 
   # graph is the huge.generate() object to mutate, fraction is the fraction of edges to change. 
   # We basically 'swap pairs of nodes' by switching their cols and rows. 
-  prec.mat = graph$omega
+  prec.mat = cov2cor(graph$omega) # added this for jointGHS. Include scale argument?
   prec.mat[which(abs(prec.mat)<10^(-4),arr.ind=T)]=0
-  cov.mat = graph$sigma
+  cov.mat = cov2cor(graph$sigma) # added this
   adj.mat = graph$theta
   data=graph$data
   p = ncol(graph$omega)
@@ -44,12 +44,24 @@ mutate.graph= function(graph,fraction){
   edges = which(as.matrix(adj.mat.upper)==1,arr.ind=T) # Edge pairs.
   n.mutations = floor(nrow(edges)*fraction)
   
+  if(fraction==1){ # added this for jointGHS
+    ans = list()
+    graph.new = huge.generator(nrow(data),p,graph='scale-free',verbose = F,v=0.5,u=0.05)
+    ans$cov.mat = cov2cor(graph.new$sigma)
+    ans$prec.mat = cov2cor(graph.new$omega) # added this for jointGHS. Include scale argument?
+    ans$prec.mat[which(abs(ans$prec.mat)<10^(-4),arr.ind=T)]=0
+    ans$adj.mat = graph.new$theta
+    ans$data = mvtnorm::rmvnorm(nrow(data), mean=rep(0,ncol(data)), ans$cov.mat)
+    return(ans)
+  }
+  
   if(n.mutations==0 | is.na(n.mutations)){
     ans = list()
     ans$cov.mat=cov.mat
     ans$prec.mat = prec.mat
     ans$adj.mat = adj.mat
-    ans$data = data
+    #ans$data = data # removed: should not reuse data
+    ans$data = mvtnorm::rmvnorm(nrow(data), mean=rep(0,ncol(data)), ans$cov.mat)
     return(ans)
   }
   

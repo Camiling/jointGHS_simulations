@@ -1,6 +1,6 @@
 library(jointGHS) # Must be installed from Camiling/jointGHS
 library(fastGHS) # Must be installed from Camiling/fastGHS
-library(tailoredGlasso)
+library(tailoredGlasso) # Must be installed from Camiling/tailoredGlasso
 library(huge)
 library(glasso)
 library(igraph)
@@ -67,9 +67,9 @@ perform_jointGHS_simulation = function(K, n.vals, p, N=100, seeds=sample(1:1000,
   cov.matrices = list()
   prec.matrices = list()
   # Start by generating the first prec matrix
-  huge.init = huge.generator(n.vals[1],p,graph='scale-free',verbose = F)
+  huge.init = huge.generator(n.vals[1],p,graph='scale-free',verbose = F,v=0.5,u=0.05)
   theta.init = huge.init$omega
-  theta.init[which(abs(theta.init)<1e-5)] = 0
+  theta.init[which(abs(theta.init)<1e-5,arr.ind=T)] = 0
   spars.init = huge.init$sparsity
   cov.matrices[[1]] = huge.init$sigma
   prec.matrices[[1]] = theta.init
@@ -177,13 +177,14 @@ jointGHS_simulation_one_iteration = function(n.vals,cov.matrices,prec.matrices,s
     ghs.res[[k]][which(abs(ghs.res[[k]])<1e-5, arr.ind=T)] = 0
   }
   # Perform joint methods
-  res.tmp = jointGHS(X=y, tau_sq = tau_sq, verbose = F, fix_tau = T)$theta
+  res.tmp = jointGHS(X=y, tau_sq = tau_sq, verbose = F, epsilon=1e-3,fix_tau = T)$theta
   jgl.tmp = JGL_select_AIC(Y=y,penalty='fused',nlambda1=20,lambda1.min=0.01,lambda1.max=1,nlambda2=20,lambda2.min=0,lambda2.max=0.1,lambda2.init=0.01,
                            penalize.diagonal=penalize.diagonal)
 
   est=list()
   
   # Results from jointGHS
+  res.tmp = lapply(res.tmp, cov2cor)
   est$opt.sparsities  = unlist(lapply(res.tmp, FUN= function(m) tailoredGlasso::sparsity(abs(res.tmp[[k]])>1e-5)))
   est$matrix.distances = sapply(1:K,FUN=function(k) matrix.distance(prec.matrices[[k]], res.tmp[[k]]))
   est$precisions =  sapply(1:K,FUN=function(k) precision(prec.matrices[[k]]!=0, abs(res.tmp[[k]])>1e-5 ))
