@@ -13,7 +13,6 @@ p=100
 # K = 2 data sets, of various similarity -------------
 K=2
 n.vals = c(150,200)
-#n.vals = c(100,150)
 fracs.disagreement = c(0,0.2,0.4,1)
 
 # Case 1: datasets from same distribution
@@ -35,7 +34,9 @@ res.4 = perform_jointGHS_simulation(K,n.vals, p, N, frac.disagreement = fracs.di
 # Print results
 print_results_jointGHS_show_SD(list(res.1, res.2, res.3, res.4),fracs.disagreement)
 
-save(list(res.1, res.2, res.3, res.4), 'jointGHS_simulations_K2.Rdata')
+res.K2 = list(res.1, res.2, res.3, res.4)
+
+save(res.K2, file="jointGHS_simulations_K2.Rdata")
 
 # K = 4 data sets, of various similarity -------------
 K.2 = 4
@@ -60,7 +61,9 @@ res.8 = perform_jointGHS_simulation(K.2,n.vals.2, p, N, frac.disagreement = frac
 # Print results
 print_results_jointGHS_show_SD(list(res.5, res.6, res.7, res.8),fracs.disagreement)
 
-save(list(res.5, res.6, res.7, res.8), 'jointGHS_simulations_K4.Rdata')
+res.K4.list = list(res.5, res.6, res.7, res.8)
+
+save(res.K4.list, file="jointGHS_simulations_K4.Rdata")
 
 # K = 10 data sets, of various similarity -------------
 K.3=10
@@ -85,13 +88,15 @@ res.12 = perform_jointGHS_simulation(K.3,n.vals.3, p, N, frac.disagreement = fra
 # Print results
 print_results_jointGHS_show_SD(list(res.9, res.10, res.11, res.12),fracs.disagreement)
 
-save(list(res.9, res.10, res.11, res.12), 'jointGHS_simulations_K10.Rdata')
+res.K10.list = list(res.9, res.10, res.11, res.12)
+
+save(res.K10.list, file="jointGHS_simulations_K10.Rdata")
 
 registerDoSEQ()
 
 # Save all simulation results
 res.list = list(res.1, res.2, res.3, res.4, res.5, res.6, res.7, res.8, res.9, res.10, res.11, res.12)
-save(res.list, 'jointGHS_simulations.Rdata')
+save(res.list, file="jointGHS_simulations.Rdata")
 
 
 
