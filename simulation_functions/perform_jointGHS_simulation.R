@@ -73,11 +73,19 @@ perform_jointGHS_simulation = function(K, n.vals, p, N=100, seeds=sample(1:1000,
   spars.init = huge.init$sparsity
   cov.matrices[[1]] = huge.init$sigma
   prec.matrices[[1]] = theta.init
+  # Avoid rounding errors leading to matrices not being symmetric
+  if(!matrixcalc::is.symmetric.matrix(prec.matrices[[1]])){
+    prec.matrices[[1]] = round(prec.matrices[[1]],8)
+  }
   if(method=='symmetric'){
     for(k in 2:K){
       huge.tmp = mutate.graph(huge.init,frac.disagreement)
       cov.matrices[[k]] = huge.tmp$cov.mat
       prec.matrices[[k]] = huge.tmp$prec.mat
+      # Avoid rounding errors leading to matrices not being symmetric
+      if(!matrixcalc::is.symmetric.matrix(prec.matrices[[k]])){
+        prec.matrices[[k]] = round(prec.matrices[[k]],8)
+      }
     }
   }
   else{ # First K-1 graphs are similar
@@ -85,11 +93,19 @@ perform_jointGHS_simulation = function(K, n.vals, p, N=100, seeds=sample(1:1000,
       huge.tmp = mutate.graph(huge.init,frac.disagreement)
       cov.matrices[[k]] = huge.tmp$cov.mat
       prec.matrices[[k]] = huge.tmp$prec.mat
+      # Avoid rounding errors leading to matrices not being symmetric
+      if(!matrixcalc::is.symmetric.matrix(prec.matrices[[k]])){
+        prec.matrices[[k]] = round(prec.matrices[[k]],8)
+      }
     }
     # Last graph is completely different
     huge.tmp = mutate.graph(huge.init,fraction = 1)
     cov.matrices[[K]] = huge.tmp$cov.mat
     prec.matrices[[K]] = huge.tmp$prec.mat
+    # Avoid rounding errors leading to matrices not being symmetric
+    if(!matrixcalc::is.symmetric.matrix(prec.matrices[[K]])){
+      prec.matrices[[K]] = round(prec.matrices[[K]],8)
+    }
   }
   #registerDoParallel(nCores)
   res.list = foreach (i=1:N) %dopar% {

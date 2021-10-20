@@ -27,7 +27,7 @@ FDR = function(g,g.hat){
 }
 
 
-mutate.graph= function(graph,fraction){
+mutate.graph= function(graph,fraction, generate.data=F){
   # Mutate a given fraction of the edges of a graph. 
   # graph is the huge.generate() object to mutate, fraction is the fraction of edges to change. 
   # We basically 'swap pairs of nodes' by switching their cols and rows. 
@@ -93,8 +93,10 @@ mutate.graph= function(graph,fraction){
   ans$cov.mat[which(abs(ans$cov.mat)<1e-4,arr.ind = T)] = 0
   ans$prec.mat = prec.mat
   ans$adj.mat = adj.mat
-  # Generate new data
-  ans$data = mvtnorm::rmvnorm(nrow(data), mean=rep(0,ncol(data)), ans$cov.mat)
+  if(generate.data){
+    # Generate new data
+    ans$data = mvtnorm::rmvnorm(nrow(data), mean=rep(0,ncol(data)), ans$cov.mat)
+  }
   return(ans)
 }
 
