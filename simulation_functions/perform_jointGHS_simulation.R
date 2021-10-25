@@ -1,6 +1,7 @@
-library(jointGHS) # Must be installed from Camiling/jointGHS
+library(jointGHS) # Must be installed from Camiling/jointGHS on github
 library(fastGHS) # Must be installed from Camiling/fastGHS
 library(tailoredGlasso) # Must be installed from Camiling/tailoredGlasso
+library(JoStARS) # Must be installed from Camiling/JoStARS
 library(huge)
 library(glasso)
 library(igraph)
@@ -27,11 +28,15 @@ library(Rcpp)
 #' @param tau_sq_ghs the value of tau to use in the GHS
 #' @param ebic.gamma the additional penalty term in the extended BIC criterion for the graphical lasso
 #' @param method how should the similarity between the prec matrices be? Symmetric by default, meaning all are equally different. If not, one will stand out as completely unrelated.
+#' @param include.jostars should we perform JoStARS?
+#' @param include.JGL should the joint graphical lasso be included?
+#' @param var.thesh.stars if include.jostars, the variability threshold to use. Default \eqn{0.1}
 #' @param penalize.diagonal should the diagonal be penalized in the graphical lasso-based methods?
 #' @param verbose logical indicator of printing information at each iteration
 #' @param scale should the data be scaled?
 #' @return simulation results, including sparsity, precision, recall and specificity
-perform_jointGHS_simulation = function(K, n.vals, p, N=100, seeds=sample(1:1000,N), nCores = 3, frac.disagreement = 0, tau_sq = 10, tau_sq_ghs = 1, ebic.gamma = 0, method='symmetric', penalize.diagonal=FALSE ,verbose=TRUE, scale=TRUE){
+perform_jointGHS_simulation = function(K, n.vals, p, N=100, seeds=sample(1:1000,N), nCores = 3, frac.disagreement = 0, tau_sq = 10, tau_sq_ghs = 1, ebic.gamma = 0, method='symmetric', 
+                                       include.jostars=TRUE, include.JGL = FALSE, var.thresh.jostars = 0.1,penalize.diagonal=FALSE ,verbose=TRUE, scale=TRUE){
  
   res=list()
   
@@ -49,7 +54,14 @@ perform_jointGHS_simulation = function(K, n.vals, p, N=100, seeds=sample(1:1000,
   res$recalls.jgl =  matrix(0,N,K)
   res$matrix.distances.jgl =  matrix(0,N,K)
   
-  # GHS results (when applicable)
+  # JoStARS results
+  res$opt.sparsities.jostars = matrix(0,N,K)
+  res$precisions.jostars =  matrix(0,N,K)
+  res$specificities.jostars =  matrix(0,N,K)
+  res$recalls.jostars =  matrix(0,N,K)
+  res$matrix.distances.jostars =  matrix(0,N,K)
+  
+  # GHS results
   res$opt.sparsities.ghs = matrix(0,N,K)
   res$precisions.ghs =  matrix(0,N,K)
   res$specificities.ghs =  matrix(0,N,K)
@@ -74,8 +86,8 @@ perform_jointGHS_simulation = function(K, n.vals, p, N=100, seeds=sample(1:1000,
   cov.matrices[[1]] = huge.init$sigma
   prec.matrices[[1]] = theta.init
   # Avoid rounding errors leading to matrices not being symmetric
-  if(!matrixcalc::is.symmetric.matrix(prec.matrices[[1]])){
-    prec.matrices[[1]] = round(prec.matrices[[1]],8)
+  if(!matrixcalc::is.symmetric.matrix(cov.matrices[[1]])){
+    cov.matrices[[1]] = round(cov.matrices[[1]],8)
   }
   if(method=='symmetric'){
     for(k in 2:K){
@@ -83,8 +95,8 @@ perform_jointGHS_simulation = function(K, n.vals, p, N=100, seeds=sample(1:1000,
       cov.matrices[[k]] = huge.tmp$cov.mat
       prec.matrices[[k]] = huge.tmp$prec.mat
       # Avoid rounding errors leading to matrices not being symmetric
-      if(!matrixcalc::is.symmetric.matrix(prec.matrices[[k]])){
-        prec.matrices[[k]] = round(prec.matrices[[k]],8)
+      if(!matrixcalc::is.symmetric.matrix(cov.matrices[[k]])){
+        cov.matrices[[k]] = round(cov.matrices[[k]],8)
       }
     }
   }
@@ -94,8 +106,8 @@ perform_jointGHS_simulation = function(K, n.vals, p, N=100, seeds=sample(1:1000,
       cov.matrices[[k]] = huge.tmp$cov.mat
       prec.matrices[[k]] = huge.tmp$prec.mat
       # Avoid rounding errors leading to matrices not being symmetric
-      if(!matrixcalc::is.symmetric.matrix(prec.matrices[[k]])){
-        prec.matrices[[k]] = round(prec.matrices[[k]],8)
+      if(!matrixcalc::is.symmetric.matrix(cov.matrices[[k]])){
+        cov.matrices[[k]] = round(cov.matrices[[k]],8)
       }
     }
     # Last graph is completely different
@@ -103,16 +115,17 @@ perform_jointGHS_simulation = function(K, n.vals, p, N=100, seeds=sample(1:1000,
     cov.matrices[[K]] = huge.tmp$cov.mat
     prec.matrices[[K]] = huge.tmp$prec.mat
     # Avoid rounding errors leading to matrices not being symmetric
-    if(!matrixcalc::is.symmetric.matrix(prec.matrices[[K]])){
-      prec.matrices[[K]] = round(prec.matrices[[K]],8)
+    if(!matrixcalc::is.symmetric.matrix(cov.matrices[[K]])){
+      cov.matrices[[K]] = round(cov.matrices[[K]],8)
     }
   }
-  #registerDoParallel(nCores)
+  registerDoParallel(nCores)
   res.list = foreach (i=1:N) %dopar% {
     jointGHS_simulation_one_iteration(n.vals=n.vals,cov.matrices=cov.matrices,prec.matrices=prec.matrices,scale=scale,
-                                     ebic.gamma=ebic.gamma,tau_sq = tau_sq, tau_sq_ghs=tau_sq_ghs,penalize.diagonal=penalize.diagonal,seed=seeds[i]);
+                                     ebic.gamma=ebic.gamma,tau_sq = tau_sq, tau_sq_ghs=tau_sq_ghs,include.jostars=include.jostars, include.JGL=include.JGL, 
+                                     var.thresh.jostars=var.thresh.jostars, penalize.diagonal=penalize.diagonal,seed=seeds[i]);
   }
-  #registerDoSEQ()
+  registerDoSEQ()
   for(i in 1:N){
     est.tmp = res.list[[i]]
     # Results from jointGHS
@@ -122,11 +135,21 @@ perform_jointGHS_simulation = function(K, n.vals, p, N=100, seeds=sample(1:1000,
     res$recalls[i,] = est.tmp$recalls
     res$specificities[i,] =  est.tmp$specificities
     # Results from jgl
-    res$opt.sparsities.jgl[i,] = est.tmp$opt.sparsities.jgl
-    res$matrix.distances.jgl[i,] = est.tmp$matrix.distances.jgl
-    res$precisions.jgl[i,] = est.tmp$precisions.jgl
-    res$recalls.jgl[i,] = est.tmp$recalls.jgl
-    res$specificities.jgl[i,] =  est.tmp$specificities.jgl
+    if(include.JGL){
+      res$opt.sparsities.jgl[i,] = est.tmp$opt.sparsities.jgl
+      res$matrix.distances.jgl[i,] = est.tmp$matrix.distances.jgl
+      res$precisions.jgl[i,] = est.tmp$precisions.jgl
+      res$recalls.jgl[i,] = est.tmp$recalls.jgl
+      res$specificities.jgl[i,] =  est.tmp$specificities.jgl 
+    }
+    # Results from jostars
+    if(include.jostars){
+      res$opt.sparsities.jostars[i,] = est.tmp$opt.sparsities.jostars
+      res$matrix.distances.jostars[i,] = est.tmp$matrix.distances.jostars
+      res$precisions.jostars[i,] = est.tmp$precisions.jostars
+      res$recalls.jostars[i,] = est.tmp$recalls.jostars
+      res$specificities.jostars[i,] =  est.tmp$specificities.jostars
+    }
     # Results from ghs
     res$opt.sparsities.ghs[i,] = est.tmp$opt.sparsities.ghs
     res$matrix.distances.ghs[i,] = est.tmp$matrix.distances.ghs
@@ -148,11 +171,22 @@ perform_jointGHS_simulation = function(K, n.vals, p, N=100, seeds=sample(1:1000,
   res$mean.matrix.distances = colMeans(res$matrix.distances)
   
   # Mean results from JGL
-  res$mean.opt.sparsities.jgl = colMeans(res$opt.sparsities.jgl)
-  res$mean.precisions.jgl = colMeans(res$precisions.jgl)
-  res$mean.recalls.jgl = colMeans(res$recalls.jgl)
-  res$mean.specificities.jgl =  colMeans(res$specificities.jgl)
-  res$mean.matrix.distances.jgl = colMeans(res$matrix.distances.jgl)
+  if(include.JGL){
+    res$mean.opt.sparsities.jgl = colMeans(res$opt.sparsities.jgl)
+    res$mean.precisions.jgl = colMeans(res$precisions.jgl)
+    res$mean.recalls.jgl = colMeans(res$recalls.jgl)
+    res$mean.specificities.jgl =  colMeans(res$specificities.jgl)
+    res$mean.matrix.distances.jgl = colMeans(res$matrix.distances.jgl)
+  }
+  
+  # Mean results from JoStARS
+  if(include.jostars){
+    res$mean.opt.sparsities.jostars = colMeans(res$opt.sparsities.jostars)
+    res$mean.precisions.jostars = colMeans(res$precisions.jostars)
+    res$mean.recalls.jostars = colMeans(res$recalls.jostars)
+    res$mean.specificities.jostars =  colMeans(res$specificities.jostars)
+    res$mean.matrix.distances.jostars = colMeans(res$matrix.distances.jostars)
+  }
   
   # Mean results from GHS
   res$mean.opt.sparsities.ghs = colMeans(res$opt.sparsities.ghs)
@@ -175,7 +209,8 @@ perform_jointGHS_simulation = function(K, n.vals, p, N=100, seeds=sample(1:1000,
 
 # Function for performing one iteration -----------------------------------------
 
-jointGHS_simulation_one_iteration = function(n.vals,cov.matrices,prec.matrices,scale,ebic.gamma,tau_sq, tau_sq_ghs,penalize.diagonal,seed) {
+jointGHS_simulation_one_iteration = function(n.vals,cov.matrices,prec.matrices,scale,ebic.gamma,tau_sq, tau_sq_ghs,include.jostars,include.JGL, 
+                                             var.thresh.jostars, penalize.diagonal,seed) {
   y = list()
   K=length(n.vals)
   p=ncol(prec.matrices[[1]])
@@ -194,9 +229,17 @@ jointGHS_simulation_one_iteration = function(n.vals,cov.matrices,prec.matrices,s
   }
   # Perform joint methods
   res.tmp = jointGHS(X=y, tau_sq = tau_sq, verbose = F, epsilon=1e-3,fix_tau = T)$theta
-  jgl.tmp = JGL_select_AIC(Y=y,penalty='fused',nlambda1=20,lambda1.min=0.01,lambda1.max=1,nlambda2=20,lambda2.min=0,lambda2.max=0.1,lambda2.init=0.01,
-                           penalize.diagonal=penalize.diagonal)
-
+  
+  if(include.JGL){
+    jgl.tmp = JGL_select_AIC(Y=y,penalty='fused',nlambda1=10,lambda1.min=0.01,lambda1.max=1,nlambda2=10,lambda2.min=0,lambda2.max=0.1,lambda2.init=0.01,
+                             penalize.diagonal=penalize.diagonal)
+  }
+  if(include.jostars){
+    jostars.tmp = JoStARS::JoStARS(Y=y,var.thresh = var.thresh.jostars,scale=T,nlambda1=20,
+                                   lambda1.min=0.01,lambda1.max=1, nlambda2=20,lambda2.min=0,lambda2.max = 0.1, lambda2.init = 0.01,
+                                   ebic.gamma=0.2,verbose=F,parallelize = FALSE, penalize.diagonal=penalize.diagonal)
+    
+  }
   est=list()
   
   # Results from jointGHS
@@ -208,11 +251,22 @@ jointGHS_simulation_one_iteration = function(n.vals,cov.matrices,prec.matrices,s
   est$specificities =  sapply(1:K,FUN=function(k) specificity(prec.matrices[[k]]!=0, abs(res.tmp[[k]])>1e-5 ))
   
   # Results from JGL
-  est$opt.sparsities.jgl = jgl.tmp$opt.sparsities
-  est$matrix.distances.jgl = sapply(1:K,FUN=function(k) matrix.distance(prec.matrices[[k]], jgl.tmp$opt.fit[[k]]))
-  est$precisions.jgl = sapply(1:K,FUN=function(k) precision(prec.matrices[[k]]!=0, jgl.tmp$opt.fit[[k]]!=0))
-  est$recalls.jgl = sapply(1:K,FUN=function(k) recall(prec.matrices[[k]]!=0, jgl.tmp$opt.fit[[k]]!=0))
-  est$specificities.jgl = sapply(1:K,FUN=function(k) specificity(prec.matrices[[k]]!=0, jgl.tmp$opt.fit[[k]]!=0))
+  if(include.JGL){
+    est$opt.sparsities.jgl = jgl.tmp$opt.sparsities
+    est$matrix.distances.jgl = sapply(1:K,FUN=function(k) matrix.distance(prec.matrices[[k]], jgl.tmp$opt.fit[[k]]))
+    est$precisions.jgl = sapply(1:K,FUN=function(k) precision(prec.matrices[[k]]!=0, jgl.tmp$opt.fit[[k]]!=0))
+    est$recalls.jgl = sapply(1:K,FUN=function(k) recall(prec.matrices[[k]]!=0, jgl.tmp$opt.fit[[k]]!=0))
+    est$specificities.jgl = sapply(1:K,FUN=function(k) specificity(prec.matrices[[k]]!=0, jgl.tmp$opt.fit[[k]]!=0))
+  }
+  
+  # Results from JoStARS
+  if(include.jostars){
+    est$opt.sparsities.jostars = jostars.tmp$opt.sparsities
+    est$matrix.distances.jostars = sapply(1:K,FUN=function(k) matrix.distance(prec.matrices[[k]], jostars.tmp$opt.fit[[k]]))
+    est$precisions.jostars = sapply(1:K,FUN=function(k) precision(prec.matrices[[k]]!=0, jostars.tmp$opt.fit[[k]]!=0))
+    est$recalls.jostars = sapply(1:K,FUN=function(k) recall(prec.matrices[[k]]!=0, jostars.tmp$opt.fit[[k]]!=0))
+    est$specificities.jostars = sapply(1:K,FUN=function(k) specificity(prec.matrices[[k]]!=0, jostars.tmp$opt.fit[[k]]!=0))
+  }
   
   # Results from GHS
   est$opt.sparsities.ghs = unlist(lapply(ghs.res, FUN= function(m) tailoredGlasso::sparsity(m!=0)))
@@ -230,7 +284,7 @@ jointGHS_simulation_one_iteration = function(n.vals,cov.matrices,prec.matrices,s
   return(est)
 }
 
-print_results_jointGHS_show_SD = function(obj.list,fracs.mutated,show.distance=F,show.specificity=F){
+print_results_jointGHS_show_SD = function(obj.list,fracs.mutated,include.jostars=F, include.JGL=F, show.distance=F,show.specificity=F){
   # obj is a list of objects returned by perform_jointGHS_simulation.
   # fracs.mutated is a vector of the mutated fraction in each simulation object
   # show.distance: should the matrix distance be printed?
@@ -259,15 +313,28 @@ print_results_jointGHS_show_SD = function(obj.list,fracs.mutated,show.distance=F
       if(show.distance) cat(' & ',round(obj$mean.matrix.distances.ghs[k],3))
     }  
     cat(' \\\\ \n')
-    cat('  & JGL ')  
-    for(k in 1:K){
-      cat(' && ',round(obj$mean.opt.sparsities.jgl[k],3), '(',round(sd(obj$opt.sparsities.jgl[,k]),3),')',' & ',
-          round(obj$mean.precisions.jgl[k],2),'(',round(sd(obj$precisions.jgl[,k]),2),')',' & ',
-          round(obj$mean.recalls.jgl[k],2),'(',round(sd(obj$recalls.jgl[,k]),2),')')
-      if(show.specificity)cat('&',round(obj$mean.specificities.jgl[k],2), '(',round(sd(obj$specificities.jgl[,k]),2),')') 
-      if(show.distance) cat(' & ',round(obj$mean.matrix.distances.jgl[k],3))
-    }  
-    cat(' \\\\ \n')
+    if(include.JGL){
+      cat('  & JGL ')  
+      for(k in 1:K){
+        cat(' && ',round(obj$mean.opt.sparsities.jgl[k],3), '(',round(sd(obj$opt.sparsities.jgl[,k]),3),')',' & ',
+            round(obj$mean.precisions.jgl[k],2),'(',round(sd(obj$precisions.jgl[,k]),2),')',' & ',
+            round(obj$mean.recalls.jgl[k],2),'(',round(sd(obj$recalls.jgl[,k]),2),')')
+        if(show.specificity)cat('&',round(obj$mean.specificities.jgl[k],2), '(',round(sd(obj$specificities.jgl[,k]),2),')') 
+        if(show.distance) cat(' & ',round(obj$mean.matrix.distances.jgl[k],3))
+      }  
+      cat(' \\\\ \n')
+    }
+    if(include.jostars){
+      cat('  & JoStARS ')  
+      for(k in 1:K){
+        cat(' && ',round(obj$mean.opt.sparsities.jostars[k],3), '(',round(sd(obj$opt.sparsities.jostars[,k]),3),')',' & ',
+            round(obj$mean.precisions.jostars[k],2),'(',round(sd(obj$precisions.jostars[,k]),2),')',' & ',
+            round(obj$mean.recalls.jostars[k],2),'(',round(sd(obj$recalls.jostars[,k]),2),')')
+        if(show.specificity)cat('&',round(obj$mean.specificities.jostars[k],2), '(',round(sd(obj$specificities.jostars[,k]),2),')') 
+        if(show.distance) cat(' & ',round(obj$mean.matrix.distances.jostars[k],3))
+      }  
+      cat(' \\\\ \n')
+    }
     cat('  & jointGHS')
     for(k in 1:K){
       cat(' && ',round(obj$mean.opt.sparsities[k],3), '(',round(sd(obj$opt.sparsities[,k]),3),')',' & ',

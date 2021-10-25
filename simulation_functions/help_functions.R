@@ -51,7 +51,9 @@ mutate.graph= function(graph,fraction, generate.data=F){
     ans$prec.mat = cov2cor(graph.new$omega) # added this for jointGHS. Include scale argument?
     ans$prec.mat[which(abs(ans$prec.mat)<10^(-4),arr.ind=T)]=0
     ans$adj.mat = graph.new$theta
-    ans$data = mvtnorm::rmvnorm(nrow(data), mean=rep(0,ncol(data)), ans$cov.mat)
+    if(generate.data){
+      ans$data = mvtnorm::rmvnorm(nrow(data), mean=rep(0,ncol(data)), ans$cov.mat)
+    }
     return(ans)
   }
   
@@ -61,7 +63,9 @@ mutate.graph= function(graph,fraction, generate.data=F){
     ans$prec.mat = prec.mat
     ans$adj.mat = adj.mat
     #ans$data = data # removed: should not reuse data
-    ans$data = mvtnorm::rmvnorm(nrow(data), mean=rep(0,ncol(data)), ans$cov.mat)
+    if(generate.data){
+      ans$data = mvtnorm::rmvnorm(nrow(data), mean=rep(0,ncol(data)), ans$cov.mat)
+    }
     return(ans)
   }
   
