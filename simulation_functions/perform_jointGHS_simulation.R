@@ -26,17 +26,20 @@ library(Rcpp)
 #' @param frac.disagreement the fraction of edges that the networks should disagree on
 #' @param tau_sq the values of tau to use in the jointGHS. Either a vector of length \eqn{K} or a single value to use for all networks
 #' @param tau_sq_ghs the value of tau to use in the GHS
-#' @param ebic.gamma the additional penalty term in the extended BIC criterion for the graphical lasso
+#' @param ebic.gamma the additional penalty term in the extended BIC criterion for selecting similarity in JoStARS
 #' @param method how should the similarity between the prec matrices be? Symmetric by default, meaning all are equally different. If not, one will stand out as completely unrelated.
 #' @param include.jostars should we perform JoStARS?
 #' @param include.JGL should the joint graphical lasso be included?
+#' @param stars.thresh the variability threshold to use in the graphical lasso tuned by StARS
 #' @param var.thesh.stars if include.jostars, the variability threshold to use. Default \eqn{0.1}
 #' @param penalize.diagonal should the diagonal be penalized in the graphical lasso-based methods?
 #' @param verbose logical indicator of printing information at each iteration
 #' @param scale should the data be scaled?
+#' @param save.res.jointGHS should Lambda, Nu and Theta be saved for all N simulations? Requires a lot of memory. Default FALSE.
 #' @return simulation results, including sparsity, precision, recall and specificity
-perform_jointGHS_simulation = function(K, n.vals, p, N=100, seeds=sample(1:1000,N), nCores = 3, frac.disagreement = 0, tau_sq = 10, tau_sq_ghs = 1, ebic.gamma = 0, method='symmetric', 
-                                       include.jostars=TRUE, include.JGL = FALSE, var.thresh.jostars = 0.1,penalize.diagonal=FALSE ,verbose=TRUE, scale=TRUE){
+perform_jointGHS_simulation = function(K, n.vals, p, N=100, seeds=sample(1:1000,N), nCores = 3, frac.disagreement = 0, tau_sq = 10, tau_sq_ghs = 1, ebic.gamma = 0.2, method='symmetric', 
+                                       include.jostars=TRUE, include.JGL = FALSE, stars.thresh=0.05, var.thresh.jostars = 0.05,penalize.diagonal=FALSE ,verbose=TRUE, scale=TRUE, 
+                                       save.res.jointGHS = FALSE){
  
   res=list()
   
@@ -46,6 +49,11 @@ perform_jointGHS_simulation = function(K, n.vals, p, N=100, seeds=sample(1:1000,
   res$specificities =  matrix(0,N,K)
   res$recalls =  matrix(0,N,K)
   res$matrix.distances =  matrix(0,N,K)
+  if(save.res.jointGHS){
+    res$theta = list()
+    res$E_NuInv = list()
+    res$Lambda_sq = list()
+  }
   
   # JGL results (tuned by AIC)
   res$opt.sparsities.jgl = matrix(0,N,K)
@@ -123,9 +131,12 @@ perform_jointGHS_simulation = function(K, n.vals, p, N=100, seeds=sample(1:1000,
   res.list = foreach (i=1:N) %dopar% {
     jointGHS_simulation_one_iteration(n.vals=n.vals,cov.matrices=cov.matrices,prec.matrices=prec.matrices,scale=scale,
                                      ebic.gamma=ebic.gamma,tau_sq = tau_sq, tau_sq_ghs=tau_sq_ghs,include.jostars=include.jostars, include.JGL=include.JGL, 
-                                     var.thresh.jostars=var.thresh.jostars, penalize.diagonal=penalize.diagonal,seed=seeds[i]);
+                                     stars.thresh=stars.thresh, var.thresh.jostars=var.thresh.jostars, penalize.diagonal=penalize.diagonal,seed=seeds[i], 
+                                     save.res.jointGHS = save.res.jointGHS);
   }
   registerDoSEQ()
+  
+  # Save results from each replicate
   for(i in 1:N){
     est.tmp = res.list[[i]]
     # Results from jointGHS
@@ -134,6 +145,11 @@ perform_jointGHS_simulation = function(K, n.vals, p, N=100, seeds=sample(1:1000,
     res$precisions[i,] = est.tmp$precisions
     res$recalls[i,] = est.tmp$recalls
     res$specificities[i,] =  est.tmp$specificities
+    if(save.res.jointGHS){
+      res$E_NuInv[[i]] = est.tmp$E_NuInv # A K by K matrix
+      res$theta[[i]] = est.tmp$theta # A list of length K
+      res$Lambda_sq[[i]] = est.tmp$Lambda_sq # A list of length K
+    }
     # Results from jgl
     if(include.JGL){
       res$opt.sparsities.jgl[i,] = est.tmp$opt.sparsities.jgl
@@ -210,7 +226,7 @@ perform_jointGHS_simulation = function(K, n.vals, p, N=100, seeds=sample(1:1000,
 # Function for performing one iteration -----------------------------------------
 
 jointGHS_simulation_one_iteration = function(n.vals,cov.matrices,prec.matrices,scale,ebic.gamma,tau_sq, tau_sq_ghs,include.jostars,include.JGL, 
-                                             var.thresh.jostars, penalize.diagonal,seed) {
+                                             stars.thresh, var.thresh.jostars, penalize.diagonal,seed, save.res.jointGHS) {
   y = list()
   K=length(n.vals)
   p=ncol(prec.matrices[[1]])
@@ -223,12 +239,13 @@ jointGHS_simulation_one_iteration = function(n.vals,cov.matrices,prec.matrices,s
     if (scale) y[[k]] = scale(y[[k]])
     # Use single-network methods
     glasso.tmp = huge(y[[k]],method='glasso',verbose = F)
-    glasso.res[[k]] = huge.select(glasso.tmp,criterion='ebic', ebic.gamma=ebic.gamma, verbose = F)
+    glasso.res[[k]] = huge.select(glasso.tmp,criterion='stars', stars.thresh = stars.thresh, verbose = F)
     ghs.res[[k]] = fastGHS(X=y[[k]], tau_sq = tau_sq_ghs, verbose=FALSE, fix_tau = TRUE)$theta
     ghs.res[[k]][which(abs(ghs.res[[k]])<1e-5, arr.ind=T)] = 0
   }
   # Perform joint methods
-  res.tmp = jointGHS(X=y, tau_sq = tau_sq, verbose = F, epsilon=1e-3,fix_tau = T)$theta
+  res.full.tmp = jointGHS(X=y, tau_sq = tau_sq, verbose = F, epsilon=1e-3,fix_tau = T)
+  res.tmp = res.full.tmp$theta
   
   if(include.JGL){
     jgl.tmp = JGL_select_AIC(Y=y,penalty='fused',nlambda1=10,lambda1.min=0.01,lambda1.max=1,nlambda2=10,lambda2.min=0,lambda2.max=0.1,lambda2.init=0.01,
@@ -237,10 +254,16 @@ jointGHS_simulation_one_iteration = function(n.vals,cov.matrices,prec.matrices,s
   if(include.jostars){
     jostars.tmp = JoStARS::JoStARS(Y=y,var.thresh = var.thresh.jostars,scale=T,nlambda1=20,
                                    lambda1.min=0.01,lambda1.max=1, nlambda2=20,lambda2.min=0,lambda2.max = 0.1, lambda2.init = 0.01,
-                                   ebic.gamma=0.2,verbose=F,parallelize = FALSE, penalize.diagonal=penalize.diagonal)
-    
+                                   ebic.gamma=ebic.gamma,verbose=F,parallelize = FALSE, penalize.diagonal=penalize.diagonal)
   }
   est=list()
+  
+  # If save.res.jointGHS==T, save Lambda, expectation of 1/Nu and Theta
+  if(save.res.jointGHS){
+    est$E_NuInv = res.full.tmp$E_NuInv # A K by K matrix
+    est$theta = res.full.tmp$theta # A list of length K
+    est$Lambda_sq = res.full.tmp$Lambda_sq # A list of length K
+  }
   
   # Results from jointGHS
   res.tmp = lapply(res.tmp, cov2cor)
