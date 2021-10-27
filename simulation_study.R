@@ -84,24 +84,27 @@ if(run.K4){
 
 # K = 10 data sets, of various similarity -------------
 K.3=10
-n.vals.3 = c(150,200, 150, 100, 120, 140, 170, 180, 200, 190)
+#n.vals.3 = c(150,200, 150, 100, 120, 140, 170, 180, 200, 190)
+n.vals.3 = c(150,100, 130, 100, 120, 140, 150, 110, 120, 100)
+
+# Try tau_sq = 0.005 in GHS, instead of 0.01
 
 if(run.K10){
   # Case 9: datasets from same distribution
   set.seed(123)
-  res.9 = perform_jointGHS_simulation(K.3,n.vals.3, p, N, frac.disagreement = fracs.disagreement[1], tau_sq = 100, tau_sq_ghs = 0.01, stars.thresh=stars.thresh, include.jostars = FALSE, method='symmetric', nCores = nCores)
+  res.9 = perform_jointGHS_simulation(K.3,n.vals.3, p, N, frac.disagreement = fracs.disagreement[1], tau_sq = 100, tau_sq_ghs = 0.005, stars.thresh=stars.thresh, include.jostars = FALSE, method='symmetric', nCores = nCores)
   
   # Case 10: datasets from similar distributions (80% edge agreement)
   set.seed(123)
-  res.10 = perform_jointGHS_simulation(K.3,n.vals.3, p, N, frac.disagreement = fracs.disagreement[2], tau_sq = 100, tau_sq_ghs = 0.01, stars.thresh=stars.thresh, include.jostars = FALSE, method='symmetric', nCores = nCores)
+  res.10 = perform_jointGHS_simulation(K.3,n.vals.3, p, N, frac.disagreement = fracs.disagreement[2], tau_sq = 100, tau_sq_ghs = 0.005, stars.thresh=stars.thresh, include.jostars = FALSE, method='symmetric', nCores = nCores)
   
   # Case 11: datasets from slightly related distributions (60% edge agreement)
   set.seed(123)
-  res.11 = perform_jointGHS_simulation(K.3,n.vals.3, p, N, frac.disagreement = fracs.disagreement[3], tau_sq = 100, tau_sq_ghs = 0.01,stars.thresh=stars.thresh, include.jostars = FALSE, method='symmetric', nCores = nCores)
+  res.11 = perform_jointGHS_simulation(K.3,n.vals.3, p, N, frac.disagreement = fracs.disagreement[3], tau_sq = 100, tau_sq_ghs = 0.005,stars.thresh=stars.thresh, include.jostars = FALSE, method='symmetric', nCores = nCores)
   
   # Case 12: datasets from unrelated distributions
   set.seed(123)
-  res.12 = perform_jointGHS_simulation(K.3,n.vals.3, p, N, frac.disagreement = fracs.disagreement[4], tau_sq = 100, tau_sq_ghs = 0.01,stars.thresh=stars.thresh, include.jostars = FALSE, method='symmetric', nCores = nCores)
+  res.12 = perform_jointGHS_simulation(K.3,n.vals.3, p, N, frac.disagreement = fracs.disagreement[4], tau_sq = 100, tau_sq_ghs = 0.005,stars.thresh=stars.thresh, include.jostars = FALSE, method='symmetric', nCores = nCores)
   
   # Save results
   res.K10.list = list(res.9, res.10, res.11, res.12)  
