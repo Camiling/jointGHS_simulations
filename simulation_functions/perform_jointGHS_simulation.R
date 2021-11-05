@@ -218,6 +218,7 @@ perform_jointGHS_simulation = function(K, n.vals, p, N=100, seeds=sample(1:1000,
   res$mean.specificities.glasso =  colMeans(res$specificities.glasso)
   res$mean.matrix.distances.glasso = colMeans(res$matrix.distances.glasso)
   
+  res$true.prec.matrices = prec.matrices
   res$true.sparsity = spars.init
   return(res)
   
