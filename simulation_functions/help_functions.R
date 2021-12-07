@@ -27,13 +27,15 @@ FDR = function(g,g.hat){
 }
 
 
-mutate.graph= function(graph,fraction, generate.data=F){
+mutate.graph= function(graph,fraction, generate.data=F, scale=T){
   # Mutate a given fraction of the edges of a graph. 
   # graph is the huge.generate() object to mutate, fraction is the fraction of edges to change. 
   # We basically 'swap pairs of nodes' by switching their cols and rows. 
-  prec.mat = cov2cor(graph$omega) # added this for jointGHS. Include scale argument?
+  if(scale) prec.mat = cov2cor(graph$omega)
+  else prec.mat = graph$omega
   prec.mat[which(abs(prec.mat)<10^(-4),arr.ind=T)]=0
-  cov.mat = cov2cor(graph$sigma) # added this
+  if(scale) cov.mat = cov2cor(graph$sigma) # added this
+  else cov.mat = graph$sigma
   adj.mat = graph$theta
   data=graph$data
   p = ncol(graph$omega)
@@ -47,8 +49,10 @@ mutate.graph= function(graph,fraction, generate.data=F){
   if(fraction==1){ # added this for jointGHS
     ans = list()
     graph.new = huge.generator(nrow(data),p,graph='scale-free',verbose = F,v=0.5,u=0.05)
-    ans$cov.mat = cov2cor(graph.new$sigma)
-    ans$prec.mat = cov2cor(graph.new$omega) # added this for jointGHS. Include scale argument?
+    if(scale) ans$cov.mat = cov2cor(graph.new$sigma)
+    else ans$cov.mat = graph.new$sigma
+    if(scale) ans$prec.mat = cov2cor(graph.new$omega) 
+    else ans$prec.mat = graph.new$omega
     ans$prec.mat[which(abs(ans$prec.mat)<10^(-4),arr.ind=T)]=0
     ans$adj.mat = graph.new$theta
     if(generate.data){
