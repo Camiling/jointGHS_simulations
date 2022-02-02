@@ -100,7 +100,7 @@ pdf('plots/plots2/AIC_sparsity.pdf')
 plot.spars
 dev.off()
 
-
+# We have marked out the value of tau where the AIC is minimized. 
 
 # EXAMPLE 2 ------------------------------------------------------------------
 # GENERATE GRAPH: n=200, p=150
