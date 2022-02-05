@@ -77,8 +77,9 @@ perform_jointGHS_simulation = function(K, n.vals, p, N=100, seeds=sample(1:1000,
   # Start by generating the precision matrices 
   cov.matrices = list()
   prec.matrices = list()
+  
   # Start by generating the first prec matrix
-  huge.init = huge.generator(n.vals[1],p,graph='scale-free',verbose = F,v=0.5,u=0.05)
+  huge.init = huge.generator(n.vals[1],p,graph='scale-free',verbose = F,v=1,u=0.01)
   theta.init = huge.init$omega
   theta.init[which(abs(theta.init)<1e-5,arr.ind=T)] = 0
   spars.init = huge.init$sparsity
@@ -95,12 +96,16 @@ perform_jointGHS_simulation = function(K, n.vals, p, N=100, seeds=sample(1:1000,
   }
   if(method=='symmetric'){
     for(k in 2:K){
-      huge.tmp = mutate.graph(huge.init,frac.disagreement,scale)
-      cov.matrices[[k]] = huge.tmp$cov.mat
-      prec.matrices[[k]] = huge.tmp$prec.mat
-      # Avoid rounding errors leading to matrices not being symmetric
-      if(!matrixcalc::is.symmetric.matrix(cov.matrices[[k]])){
-        cov.matrices[[k]] = round(cov.matrices[[k]],8)
+      valid=F
+      while(!valid){ # Ensure valid precision matrices
+        huge.tmp = mutate.graph(huge.init,frac.disagreement,scale)
+        cov.matrices[[k]] = huge.tmp$cov.mat
+        prec.matrices[[k]] = huge.tmp$prec.mat
+        # Avoid rounding errors leading to matrices not being symmetric
+        if(!matrixcalc::is.symmetric.matrix(cov.matrices[[k]])){
+          cov.matrices[[k]] = round(cov.matrices[[k]],8)
+        }
+        valid = matrixcalc::is.positive.definite(cov.matrices[[k]])
       }
     }
   }
@@ -228,14 +233,16 @@ jointGHS_simulation_one_iteration = function(n.vals,cov.matrices,prec.matrices,s
     if (scale) y[[k]] = scale(y[[k]])
     # Use single-network method
     if(include.GHS){
-      ghs.res[[k]] = fastGHS::fastGHS(X=y[[k]], AIC_selection = T, AIC_eps = 0.1, epsilon = 1e-3, verbose = F)$theta
-      ghs.res[[k]][which(abs(ghs.res[[k]])<1e-5, arr.ind=T)] = 0
+      ghs.res[[k]] = fastGHS::fastGHS(X=y[[k]], AIC_selection = T, AIC_eps = 1, epsilon = 1e-3, verbose = F)$theta
     }
   }
   # Perform joint methods
   if(include.jointGHS){
     res.full.tmp = jointGHS(X=y, AIC_selection = T, AIC_eps = 0.1, epsilon=1e-3, verbose = F)
     res.tmp = res.full.tmp$theta
+    #if(include.GHS){
+    #  ghs.res = res.full.tmp$theta_single
+    #}
   }
   if(include.SSJGL){
     lam1 = 1
@@ -288,13 +295,12 @@ jointGHS_simulation_one_iteration = function(n.vals,cov.matrices,prec.matrices,s
   }
   # Results from GHS
   if(include.GHS){
-    est$opt.sparsities.ghs = unlist(lapply(ghs.res, FUN= function(m) tailoredGlasso::sparsity(m!=0)))
+    est$opt.sparsities.ghs = unlist(lapply(ghs.res, FUN= function(m) tailoredGlasso::sparsity(abs(m)>1e-5)))
     est$matrix.distances.ghs = sapply(1:K,FUN=function(k) matrix.distance(prec.matrices[[k]], ghs.res[[k]]))
-    est$precisions.ghs = sapply(1:K,FUN=function(k) precision(prec.matrices[[k]]!=0, ghs.res[[k]]!=0))
-    est$recalls.ghs = sapply(1:K,FUN=function(k) recall(prec.matrices[[k]]!=0, ghs.res[[k]]!=0))
-    est$specificities.ghs =  sapply(1:K,FUN=function(k) specificity(prec.matrices[[k]]!=0, ghs.res[[k]]!=0))
+    est$precisions.ghs = sapply(1:K,FUN=function(k) precision(prec.matrices[[k]]!=0, abs(ghs.res[[k]])>1e-5))
+    est$recalls.ghs = sapply(1:K,FUN=function(k) recall(prec.matrices[[k]]!=0, abs(ghs.res[[k]])>1e-5))
+    est$specificities.ghs =  sapply(1:K,FUN=function(k) specificity(prec.matrices[[k]]!=0, abs(ghs.res[[k]])>1e-5))
   }
-
   return(est)
 }
 

@@ -144,9 +144,9 @@ SSJGL <- function(Y,penalty="fused",lambda0,lambda1,lambda2,
 				# diff <- max(abs(pi_delta_last - pi_delta))
 				for(k in 1:length(theta_last)) diff <- max(diff, (theta_last[[k]] - theta[[k]])^2)
 				if(doubly){
-					cat(paste0("Itr ", itr, "  Difference: ", round(diff,6), "  p.slab1: ", round(pi_delta, 4), "  p.slab2: ", round(pi_xi, 10), "\n"))
+					#cat(paste0("Itr ", itr, "  Difference: ", round(diff,6), "  p.slab1: ", round(pi_delta, 4), "  p.slab2: ", round(pi_xi, 10), "\n"))
 				}else{
-					cat(paste0("Itr ", itr, "  Difference: ", round(diff,6), "  p.slab: ", round(pi_delta, 4), "\n"))
+					#cat(paste0("Itr ", itr, "  Difference: ", round(diff,6), "  p.slab: ", round(pi_delta, 4), "\n"))
 				}
 			}
 			pi_delta_last <- pi_delta
@@ -164,7 +164,7 @@ SSJGL <- function(Y,penalty="fused",lambda0,lambda1,lambda2,
 		trace_diff <- diff
 		if(use.warm.connected) warm.connected <- mstep$connected
 		time[i] <- as.numeric(Sys.time() - start_time, units="secs")
-		cat(paste0("Ladder= ", i, " v0 = ", round(v0,5), " done. Time: ", round(time[i]), "\n"))
+		#cat(paste0("Ladder= ", i, " v0 = ", round(v0,5), " done. Time: ", round(time[i]), "\n"))
 	}
 
 	if(impute){

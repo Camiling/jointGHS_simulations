@@ -465,3 +465,136 @@ print_results_jointGHS_collapsed = function(obj.list,fracs.mutated,include.joint
   }
 }
 
+
+
+
+
+print_results_fastGHS = function(obj.list,include.glasso=TRUE, include.GHS=TRUE, include.fastGHS=TRUE, show.interval=T, show.sd = F, 
+                                  show.specificity=F){
+  # obj is a list of objects returned by perform_jointGHS_simulation.
+  # show.distance: should the matrix distance be printed?
+  # show.interval: should intervals with the 2.5% and 97% quantiles be posted?
+  # show.specificity: should the matrix distance be printed?
+  # Function for printing mean sparsities, precisions, recalls and matrix distances when several data sets were generated.
+  # Note that we print the results for the different graphs on the same lines. 
+  if(show.sd==T){
+    print_results_fastGHS_show_SD(obj.list,include.glasso=include.glasso, include.GHS=include.GHS, include.fastGHS=include.fastGHS, show.distance, show.specificity)
+  }
+  else{
+    if(show.interval){
+      # Loop over each scenario
+      for (i in 1:length(obj.list)){
+        obj=obj.list[[i]]
+        cat(fracs.mutated[i])
+        if(include.glasso){
+          cat(' & Glasso ')
+          cat(' && ',round(obj$mean.opt.sparsities.glasso,3),'[',paste(round(quantile(obj$opt.sparsities.glasso,probs=c(.025,.975)),3),collapse=','),'] &',
+              round(obj$mean.precisions.glasso,2),'[',paste(round(quantile(obj$precisions.glasso,probs=c(.025,.975)),3),collapse=','),'] &',
+              round(obj$mean.recalls.glasso,2),'[',paste(round(quantile(obj$recalls.glasso,probs=c(.025,.975)),3),collapse=','),']')
+          if(show.specificity)cat('&',round(obj$mean.specificities.glasso,2),'[',paste(round(quantile(obj$specificities.glasso,probs=c(.025,.975)),3),collapse=','),']')
+          if(show.distance) cat(' & ',round(obj$mean.matrix.distances.glasso,3))
+          cat(' \\\\ \n')         
+        }
+        if(include.GHS){
+          cat(' & GHS ')
+          cat(' && ',round(obj$mean.opt.sparsities.ghs,3), '[',paste(round(quantile(obj$opt.sparsities.ghs,probs=c(.025,.975)),3),collapse=','),'] &',
+              round(obj$mean.precisions.ghs,2),'[',paste(round(quantile(obj$precisions.ghs,probs=c(.025,.975)),3),collapse=','),'] &',
+              round(obj$mean.recalls.ghs,2),'[',paste(round(quantile(obj$recalls.ghs,probs=c(.025,.975)),3),collapse=','),']')
+          if(show.specificity)cat('&',round(obj$mean.specificities.ghs,2), '[',paste(round(quantile(obj$specificities.ghs,probs=c(.025,.975)),3),collapse=','),']')
+          if(show.distance) cat(' & ',round(obj$mean.matrix.distances.ghs,3))
+          cat(' \\\\ \n')          
+        }
+        if(include.fastGHS){
+          cat(' & fastGHS ')
+          cat(' && ',round(obj$mean.opt.sparsities.fastghs,3), '[',paste(round(quantile(obj$opt.sparsities.fastghs,probs=c(.025,.975)),3),collapse=','),'] &',
+              round(obj$mean.precisions.fastghs,2),'[',paste(round(quantile(obj$precisions.fastghs,probs=c(.025,.975)),3),collapse=','),'] &',
+              round(obj$mean.recalls.fastghs,2),'[',paste(round(quantile(obj$recalls.fastghs,probs=c(.025,.975)),3),collapse=','),']')
+          if(show.specificity)cat('&',round(obj$mean.specificities.fastghs,2), '[',paste(round(quantile(obj$specificities.fastghs,probs=c(.025,.975)),3),collapse=','),']')
+          if(show.distance) cat(' & ',round(obj$mean.matrix.distances.fastghs,3))
+          cat(' \\\\ \n')          
+        }
+        cat(' \\\\ \n \\hline \n')
+      }
+    }
+    else{
+      # Loop over each scenario
+      for (i in 1:length(obj.list)){
+        obj=obj.list[[i]]
+        cat(fracs.mutated[i])
+        cat(' & Glasso ')
+        if(include.glasso){
+          cat(' && ',round(obj$mean.opt.sparsities.glasso,3), ' & ',
+              round(obj$mean.precisions.glasso,2),' & ',
+              round(obj$mean.recalls.glasso,2))
+          if(show.specificity)cat('&',round(obj$mean.specificities.glasso,2))
+          if(show.distance) cat(' & ',round(obj$mean.matrix.distances.glasso,3))
+          cat(' \\\\ \n')
+        }    
+        if(include.GHS){
+          cat(' & GHS ')
+          cat(' && ',round(obj$mean.opt.sparsities.ghs,3), '& ',
+              round(obj$mean.precisions.ghs,2),' & ',
+              round(obj$mean.recalls.ghs,2))
+          if(show.specificity)cat('&',round(obj$mean.specificities.ghs,2))
+          if(show.distance) cat(' & ',round(obj$mean.matrix.distances.ghs,3))
+          cat(' \\\\ \n')          
+        }
+        if(include.fastGHS){
+          cat('  & fastGHS')
+          cat(' && ',round(obj$mean.opt.sparsities.fastghs,3), '& ',
+              round(obj$mean.precisions.fastghs,2),' & ',
+              round(obj$mean.recalls.fastghs,2))
+          if(show.specificity)cat('&',round(obj$mean.specificities.fastghs,2)) 
+          if(show.distance) cat(' & ',round(obj$mean.matrix.distances.fastghs,3))
+          cat(' \\\\ \n \\hline \n')
+        }
+
+      }
+    }
+  }
+}
+
+print_results_fast_show_SD = function(obj.list,include.glasso=TRUE, include.GHS=TRUE, include.fastGHS=TRUE, show.distance=F,show.specificity=F){
+  # obj is a list of objects returned by perform_jointGHS_simulation.
+  # fracs.mutated is a vector of the mutated fraction in each simulation object
+  # show.distance: should the matrix distance be printed?
+  # show.specificity: should the matrix distance be printed?
+  # Function for printing mean sparsities, precisions, recalls and matrix distances when several data sets were generated.
+  # Note that we print the results for the different graphs on the same lines. 
+  # Loop over each scenario
+  for (i in 1:length(obj.list)){
+    obj=obj.list[[i]]
+    cat(fracs.mutated[i])
+    if(include.glasso){
+      cat(' & Glasso ')
+        cat(' && ',round(obj$mean.opt.sparsities.glasso,3), '(',round(sd(obj$opt.sparsities.glasso),3),')',' & ',
+            round(obj$mean.precisions.glasso,2),'(',round(sd(obj$precisions.glasso),2),')',' & ',
+            round(obj$mean.recalls.glasso,2), '(',round(sd(obj$recalls.glasso),2),')')
+        if(show.specificity)cat('&',round(obj$mean.specificities.glasso,2), '(',round(sd(obj$specificities.glasso),2),')')
+        if(show.distance) cat(' & ',round(obj$mean.matrix.distances.glasso,3))
+        cat(' \\\\ \n')
+    }
+    if(include.GHS){
+      cat(' & GHS ')
+      cat(' && ',round(obj$mean.opt.sparsities.ghs,3), '(',round(sd(obj$opt.sparsities.ghs),3),')',' & ',
+          round(obj$mean.precisions.ghs,2),'(',round(sd(obj$precisions.ghs),2),')',' & ',
+          round(obj$mean.recalls.ghs,2), '(',round(sd(obj$recalls.ghs),2),')')
+      if(show.specificity)cat('&',round(obj$mean.specificities.ghs,2), '(',round(sd(obj$specificities.ghs),2),')')
+      if(show.distance) cat(' & ',round(obj$mean.matrix.distances.ghs,3))
+      cat(' \\\\ \n')
+    }
+    if(include.fastGHS){
+      cat('  & fastGHS')
+      cat(' && ',round(obj$mean.opt.sparsities,3), '(',round(sd(obj$opt.sparsities),3),')',' & ',
+          round(obj$mean.precisions,2),'(',round(sd(obj$precisions),2),')',' & ',
+          round(obj$mean.recalls,2),'(',round(sd(obj$recalls),2),')')
+      if(show.specificity)cat('&',round(obj$mean.specificities,2), '(',round(sd(obj$specificities),2),')') 
+      if(show.distance) cat(' & ',round(obj$mean.matrix.distances,3))
+    cat(' \\\\ \n \\hline \n')
+    }
+
+  }
+}
+
+
+

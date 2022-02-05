@@ -23,7 +23,7 @@ source('simulation_functions/help_functions.R')
 # Plot SSL vs jointGHS theta_ij ---------------------------
 
 
-# n=100, p=50, larger partial correlations (0.203)
+# n=100, p=100, larger partial correlations (0.203)
 n.1=100
 p.1=100
 set.seed(123)
@@ -60,7 +60,7 @@ v1 <- 1
 lam.eff <- lam1 + c(1:10) * 5
 v0s <- lam1/lam.eff
 set.seed(123)
-fit.ssjgl = SSJGL(Y=y,penalty=penalty,lambda0=1, lambda1=lam1,lambda2=lam2, v1 = v1, v0s = v0s, tol.em=1e-4, a=1, b=p.1, doubly=TRUE, normalize=TRUE)
+fit.ssjgl = SSJGL(Y=y,penalty=penalty,lambda0=1, lambda1=lam1,lambda2=lam2, v1 = v1, v0s = v0s, tol.em=1e-4, a=1, b=p.1, doubly=T, normalize=T)
 theta.1.ssjgl = fit.ssjgl$thetalist[[10]][[1]]
 theta.2.ssjgl = fit.ssjgl$thetalist[[10]][[2]]
 tailoredGlasso::sparsity(theta.1.ssjgl!=0)
