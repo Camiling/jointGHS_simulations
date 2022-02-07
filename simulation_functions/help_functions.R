@@ -26,8 +26,92 @@ FDR = function(g,g.hat){
   return(1-precision(g,g.hat))
 }
 
+mutate.graph.alt = function(graph,fraction, generate.data=F, scale=T, larger.partialcor=F){
+  # Mutate a given fraction of the edges of a graph. 
+  # graph is the huge.generate() object to mutate, fraction is the fraction of edges to change. 
+  # We basically 'swap pairs of nodes' by switching their cols and rows. 
+  prec.mat = graph$omega
+  prec.mat[which(abs(prec.mat)<10^(-11),arr.ind=T)]=0
+  if(scale) cov.mat = cov2cor(graph$sigma) # added this
+  else cov.mat = graph$sigma
+  adj.mat = graph$theta
+  data=graph$data
+  p = ncol(graph$omega)
+  
+  adj.mat.upper = adj.mat
+  adj.mat.upper[lower.tri(adj.mat.upper)]=0
+  diag(adj.mat.upper) =0
+  edges = which(as.matrix(adj.mat.upper)==1,arr.ind=T) # Edge pairs.
+  n.mutations = floor(nrow(edges)*fraction)
+  
+  if(fraction==1){ # added this for jointGHS
+    ans = list()
+    if(larger.partialcor) graph.new = huge.generator(nrow(data),p,graph='scale-free',verbose = F,v=1,u=0.01)
+    else graph.new = huge.generator(nrow(data),p,graph='scale-free',verbose = F,v=0.5,u=0.05)
+    if(scale) ans$cov.mat = cov2cor(graph.new$sigma)
+    else ans$cov.mat = graph.new$sigma
+    ans$prec.mat = graph.new$omega
+    ans$prec.mat[which(abs(ans$prec.mat)<10^(-11),arr.ind=T)]=0
+    ans$adj.mat = graph.new$theta
+    if(generate.data){
+      ans$data = mvtnorm::rmvnorm(nrow(data), mean=rep(0,ncol(data)), ans$cov.mat)
+    }
+    return(ans)
+  }
+  
+  if(n.mutations==0 | is.na(n.mutations)){
+    ans = list()
+    ans$cov.mat=cov.mat
+    ans$prec.mat = prec.mat
+    ans$adj.mat = adj.mat
+    #ans$data = data # removed: should not reuse data
+    if(generate.data){
+      ans$data = mvtnorm::rmvnorm(nrow(data), mean=rep(0,ncol(data)), ans$cov.mat)
+    }
+    return(ans)
+  }
+  
+  edges.to.change.ind = sample(1:nrow(edges),n.mutations) # We let the first index stay, then change the second one. 
+  edges.to.change = edges[edges.to.change.ind,] # n.mutations x 2
+  nodes.add = sample(1:p,n.mutations) # id of nodes to give the edges
+  while(any(edges.to.change[,1] == nodes.add)){ # cannot give edge to itself
+    edges.to.change.ind = sample(1:nrow(edges),n.mutations) # We let the first index stay, then change the second one. 
+    edges.to.change = edges[edges.to.change.ind,] # n.mutations x 2
+    nodes.add = sample(1:p,n.mutations) # id of nodes to give the edges
+  }
+  for(i in 1:n.mutations){
+    tmp.prec=prec.mat
+    tmp.adj = adj.mat
+    tmp.dat = data
+    tmp.cov.mat = cov.mat
+    id.stay = edges.to.change[i,1]
+    id.remove = edges.to.change[i,2]
+    id.add=nodes.add[i]
+    # Swap prec mat elements in rows. Then cols, the order does not matter!
+    prec.mat[id.stay,id.add] = tmp.prec[id.stay,id.remove]
+    prec.mat[id.stay,id.remove] = tmp.prec[id.stay,id.add]
+    prec.mat[id.add,id.stay] = tmp.prec[id.remove,id.stay]
+    prec.mat[id.remove,id.stay] = tmp.prec[id.add,id.stay]
+    # swap adj mat rows
+    adj.mat[id.stay,id.add] = tmp.adj[id.stay,id.remove]
+    adj.mat[id.stay,id.remove] = tmp.adj[id.stay,id.add]
+    adj.mat[id.add,id.stay] = tmp.adj[id.remove,id.stay]
+    adj.mat[id.remove,id.stay] = tmp.adj[id.add,id.stay]
+  }
+  ans = list()
+  if(scale) ans$cov.mat=cov2cor(solve(prec.mat))
+  else ans$cov.mat= prec.mat
+  ans$cov.mat[which(abs(ans$cov.mat)<1e-11,arr.ind = T)] = 0
+  ans$prec.mat = prec.mat
+  ans$adj.mat = adj.mat
+  if(generate.data){
+    # Generate new data
+    ans$data = mvtnorm::rmvnorm(nrow(data), mean=rep(0,ncol(data)), ans$cov.mat)
+  }
+  return(ans)
+}
 
-mutate.graph= function(graph,fraction, generate.data=F, scale=T){
+mutate.graph= function(graph,fraction, generate.data=F, scale=T, larger.partialcor=F){
   # Mutate a given fraction of the edges of a graph. 
   # graph is the huge.generate() object to mutate, fraction is the fraction of edges to change. 
   # We basically 'swap pairs of nodes' by switching their cols and rows. 
@@ -48,7 +132,8 @@ mutate.graph= function(graph,fraction, generate.data=F, scale=T){
   
   if(fraction==1){ # added this for jointGHS
     ans = list()
-    graph.new = huge.generator(nrow(data),p,graph='scale-free',verbose = F,v=0.5,u=0.05)
+    if(larger.partialcor) graph.new = huge.generator(nrow(data),p,graph='scale-free',verbose = F,v=1,u=0.01)
+    else graph.new = huge.generator(nrow(data),p,graph='scale-free',verbose = F,v=0.5,u=0.05)
     if(scale) ans$cov.mat = cov2cor(graph.new$sigma)
     else ans$cov.mat = graph.new$sigma
     if(scale) ans$prec.mat = cov2cor(graph.new$omega) 
@@ -76,7 +161,6 @@ mutate.graph= function(graph,fraction, generate.data=F, scale=T){
   edges.to.change.ind = sample(1:nrow(edges),n.mutations) # We let the first index stay, then change the second one. 
   edges.to.change = edges[edges.to.change.ind,] # n.mutations x 2
   nodes.add = sample(1:p,n.mutations) # id of nodes to give the edges
-  nodes.remove = edges[sample(1:nrow(edges),n.mutations),1] # The nodes to 'leave out'
   for(i in 1:n.mutations){
     tmp.prec=prec.mat
     tmp.adj = adj.mat
@@ -347,7 +431,7 @@ print_results_jointGHS_show_SD = function(obj.list,fracs.mutated, include.jointG
       for(k in 1:K){
         cat(' && ',round(obj$mean.opt.sparsities.ssjgl[k],3), '(',round(sd(obj$opt.sparsities.ssjgl[,k]),3),')',' & ',
             round(obj$mean.precisions.ssjgl[k],2),'(',round(sd(obj$precisions.ssjgl[,k]),2),')',' & ',
-            round(obj$mean.recalls.jgl[k],2),'(',round(sd(obj$recalls.ssjgl[,k]),2),')')
+            round(obj$mean.recalls.ssjgl[k],2),'(',round(sd(obj$recalls.ssjgl[,k]),2),')')
         if(show.specificity)cat('&',round(obj$mean.specificities.ssjgl[k],2), '(',round(sd(obj$specificities.ssjgl[,k]),2),')') 
         if(show.distance) cat(' & ',round(obj$mean.matrix.distances.ssjgl[k],3))
       }  
@@ -469,7 +553,7 @@ print_results_jointGHS_collapsed = function(obj.list,fracs.mutated,include.joint
 
 
 
-print_results_fastGHS = function(obj.list,include.glasso=TRUE, include.GHS=TRUE, include.fastGHS=TRUE, show.interval=T, show.sd = F, 
+print_results_fastGHS = function(obj.list,include.glasso=TRUE, include.GHS=TRUE, include.fastGHS=TRUE, show.distance=F,show.interval=T, show.sd = F, 
                                   show.specificity=F){
   # obj is a list of objects returned by perform_jointGHS_simulation.
   # show.distance: should the matrix distance be printed?
@@ -485,7 +569,6 @@ print_results_fastGHS = function(obj.list,include.glasso=TRUE, include.GHS=TRUE,
       # Loop over each scenario
       for (i in 1:length(obj.list)){
         obj=obj.list[[i]]
-        cat(fracs.mutated[i])
         if(include.glasso){
           cat(' & Glasso ')
           cat(' && ',round(obj$mean.opt.sparsities.glasso,3),'[',paste(round(quantile(obj$opt.sparsities.glasso,probs=c(.025,.975)),3),collapse=','),'] &',
@@ -520,7 +603,6 @@ print_results_fastGHS = function(obj.list,include.glasso=TRUE, include.GHS=TRUE,
       # Loop over each scenario
       for (i in 1:length(obj.list)){
         obj=obj.list[[i]]
-        cat(fracs.mutated[i])
         cat(' & Glasso ')
         if(include.glasso){
           cat(' && ',round(obj$mean.opt.sparsities.glasso,3), ' & ',
@@ -554,7 +636,7 @@ print_results_fastGHS = function(obj.list,include.glasso=TRUE, include.GHS=TRUE,
   }
 }
 
-print_results_fast_show_SD = function(obj.list,include.glasso=TRUE, include.GHS=TRUE, include.fastGHS=TRUE, show.distance=F,show.specificity=F){
+print_results_fastGHS_show_SD = function(obj.list,include.glasso=TRUE, include.GHS=TRUE, include.fastGHS=TRUE, show.distance=F,show.specificity=F){
   # obj is a list of objects returned by perform_jointGHS_simulation.
   # fracs.mutated is a vector of the mutated fraction in each simulation object
   # show.distance: should the matrix distance be printed?
@@ -564,7 +646,6 @@ print_results_fast_show_SD = function(obj.list,include.glasso=TRUE, include.GHS=
   # Loop over each scenario
   for (i in 1:length(obj.list)){
     obj=obj.list[[i]]
-    cat(fracs.mutated[i])
     if(include.glasso){
       cat(' & Glasso ')
         cat(' && ',round(obj$mean.opt.sparsities.glasso,3), '(',round(sd(obj$opt.sparsities.glasso),3),')',' & ',
@@ -585,14 +666,13 @@ print_results_fast_show_SD = function(obj.list,include.glasso=TRUE, include.GHS=
     }
     if(include.fastGHS){
       cat('  & fastGHS')
-      cat(' && ',round(obj$mean.opt.sparsities,3), '(',round(sd(obj$opt.sparsities),3),')',' & ',
-          round(obj$mean.precisions,2),'(',round(sd(obj$precisions),2),')',' & ',
-          round(obj$mean.recalls,2),'(',round(sd(obj$recalls),2),')')
-      if(show.specificity)cat('&',round(obj$mean.specificities,2), '(',round(sd(obj$specificities),2),')') 
-      if(show.distance) cat(' & ',round(obj$mean.matrix.distances,3))
+      cat(' && ',round(obj$mean.opt.sparsities.fastghs,3), '(',round(sd(obj$opt.sparsities.fastghs),3),')',' & ',
+          round(obj$mean.precisions.fastghs,2),'(',round(sd(obj$precisions.fastghs),2),')',' & ',
+          round(obj$mean.recalls.fastghs,2),'(',round(sd(obj$recalls.fastghs),2),')')
+      if(show.specificity)cat('&',round(obj$mean.specificities.fastghs,2), '(',round(sd(obj$specificities.fastghs),2),')') 
+      if(show.distance) cat(' & ',round(obj$mean.matrix.distances.fastghs,3))
     cat(' \\\\ \n \\hline \n')
     }
-
   }
 }
 

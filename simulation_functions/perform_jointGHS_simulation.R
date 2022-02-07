@@ -36,10 +36,11 @@ source("SSJGL/R/gete.R")
 #' @param verbose logical indicator of printing information at each iteration
 #' @param scale should the data be scaled?
 #' @param save.res.jointGHS should Lambda, Nu and Theta be saved for all N simulations? Requires a lot of memory. Default FALSE.
+#' @param singleVSjoint is the simulation comparing single and joint GHS?
 #' @return simulation results, including sparsity, precision, recall and specificity
 perform_jointGHS_simulation = function(K, n.vals, p, N=100, seeds=sample(1:1000,N), nCores = 3, frac.disagreement = 0, method='symmetric', 
                                        include.jointGHS=TRUE, include.GHS=TRUE, include.SSJGL=TRUE, include.JGL = TRUE, penalize.diagonal=FALSE ,verbose=TRUE, scale=TRUE, 
-                                       save.res.jointGHS = FALSE){
+                                       save.res.jointGHS = FALSE, singleVSjoint=FALSE){
  
   res=list()
   # JointGHS results
@@ -98,7 +99,7 @@ perform_jointGHS_simulation = function(K, n.vals, p, N=100, seeds=sample(1:1000,
     for(k in 2:K){
       valid=F
       while(!valid){ # Ensure valid precision matrices
-        huge.tmp = mutate.graph(huge.init,frac.disagreement,scale)
+        huge.tmp = mutate.graph(huge.init,frac.disagreement,scale, generate.data = F, larger.partialcor = T)
         cov.matrices[[k]] = huge.tmp$cov.mat
         prec.matrices[[k]] = huge.tmp$prec.mat
         # Avoid rounding errors leading to matrices not being symmetric
@@ -133,7 +134,7 @@ perform_jointGHS_simulation = function(K, n.vals, p, N=100, seeds=sample(1:1000,
     jointGHS_simulation_one_iteration(n.vals=n.vals,cov.matrices=cov.matrices,prec.matrices=prec.matrices,scale=scale,
                                      include.jointGHS=include.jointGHS, include.GHS=include.GHS, include.SSJGL=include.SSJGL, include.JGL=include.JGL, 
                                      penalize.diagonal=penalize.diagonal,seed=seeds[i], 
-                                     save.res.jointGHS = save.res.jointGHS);
+                                     save.res.jointGHS = save.res.jointGHS,singleVSjoint);
   }
   registerDoSEQ()
   
@@ -221,28 +222,37 @@ perform_jointGHS_simulation = function(K, n.vals, p, N=100, seeds=sample(1:1000,
 # Function for performing one iteration -----------------------------------------
 
 jointGHS_simulation_one_iteration = function(n.vals,cov.matrices,prec.matrices,scale,include.jointGHS, include.GHS, include.SSJGL,include.JGL, 
-                                            penalize.diagonal,seed, save.res.jointGHS) {
+                                            penalize.diagonal,seed, save.res.jointGHS,singleVSjoint) {
   y = list()
   K=length(n.vals)
   p=ncol(prec.matrices[[1]])
   ghs.res = list()
+  tau_sq_vec = seq(1e-4,0.1,by=5e-4) # Only used if singleVSjoint==TRUE
   set.seed(seed)
   # Generate data. 
   for(k in 1:K){
     y[[k]] = mvtnorm::rmvnorm(n.vals[k], mean=rep(0,p), cov.matrices[[k]])
     if (scale) y[[k]] = scale(y[[k]])
     # Use single-network method
-    if(include.GHS){
-      ghs.res[[k]] = fastGHS::fastGHS(X=y[[k]], AIC_selection = T, AIC_eps = 1, epsilon = 1e-3, verbose = F)$theta
+    if(include.GHS & !singleVSjoint){
+      ghs.res[[k]] = fastGHS::fastGHS(X=y[[k]], AIC_selection = T, AIC_eps = 1, epsilon = 1e-5, verbose = F)$theta
     }
   }
   # Perform joint methods
   if(include.jointGHS){
     res.full.tmp = jointGHS(X=y, AIC_selection = T, AIC_eps = 0.1, epsilon=1e-3, verbose = F)
     res.tmp = res.full.tmp$theta
-    #if(include.GHS){
-    #  ghs.res = res.full.tmp$theta_single
-    #}
+    joint.spars = unlist(lapply(res.tmp, FUN= function(m) tailoredGlasso::sparsity(abs(cov2cor(m))>1e-5)))
+    # if comparing fastGHS to jointGHS, force GHS to the same sparsity
+    if(singleVSjoint){
+      for(k in 1:K){
+        ghs.res.list = lapply(tau_sq_vec, FUN = function(t) fastGHS::fastGHS(X=y[[k]], tau_sq=t,  AIC_selection = F, epsilon = 1e-3, verbose = F,fix_tau = T)$theta)
+        ghs.res.list = lapply(ghs.res.list, FUN = function(t) round(t,5))
+        ghs.spars = unlist(lapply(ghs.res.list, FUN= function(s) tailoredGlasso::sparsity(s!=0)))
+        ind.ghs = which.min(abs(joint.spars[[k]]-ghs.spars))
+        ghs.res[[k]] = ghs.res.list[[ind.ghs]]
+      }
+    }
   }
   if(include.SSJGL){
     lam1 = 1
@@ -269,8 +279,7 @@ jointGHS_simulation_one_iteration = function(n.vals,cov.matrices,prec.matrices,s
   # Results from jointGHS
   if(include.jointGHS){
     res.tmp = lapply(res.tmp, cov2cor)
-    #est$opt.sparsities  = unlist(lapply(res.tmp, FUN= function(m) tailoredGlasso::sparsity(abs(res.tmp[[k]])>1e-5)))
-    est$opt.sparsities  = unlist(lapply(res.tmp, FUN= function(m) tailoredGlasso::sparsity(abs(m)>1e-5)))
+    est$opt.sparsities  = joint.spars
     est$matrix.distances = sapply(1:K,FUN=function(k) matrix.distance(prec.matrices[[k]], res.tmp[[k]]))
     est$precisions =  sapply(1:K,FUN=function(k) precision(prec.matrices[[k]]!=0, abs(res.tmp[[k]])>1e-5))
     est$recalls =  sapply(1:K,FUN=function(k) recall(prec.matrices[[k]]!=0, abs(res.tmp[[k]])>1e-5 ))

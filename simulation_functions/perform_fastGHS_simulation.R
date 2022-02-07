@@ -33,7 +33,7 @@ source('GHS/GHS.R')
 #' @return simulation results, including sparsity, precision, recall and specificity
 perform_fastGHS_simulation = function(n, p, N=100, seeds=sample(1:1000,N), nCores = 3, ebic.gamma = 0.2,
                                        include.glasso = TRUE, include.GHS=TRUE, include.fastGHS=TRUE,
-                                       stars.thresh=0.01,penalize.diagonal=FALSE ,verbose=TRUE, scale=TRUE){
+                                       stars.thresh=0.03,penalize.diagonal=FALSE ,verbose=TRUE, scale=TRUE){
   
   res=list()
   # Glasso results
@@ -147,7 +147,6 @@ perform_fastGHS_simulation = function(n, p, N=100, seeds=sample(1:1000,N), nCore
 
 jointGHS_simulation_one_iteration = function(n,cov.mat,prec.mat,scale,ebic.gamma,include.glasso,include.GHS, include.fastGHS, 
                                              stars.thresh, penalize.diagonal,seed) {
-  y = list()
   p=ncol(prec.mat)
   set.seed(seed)
   # Generate data. 
@@ -163,13 +162,22 @@ jointGHS_simulation_one_iteration = function(n,cov.mat,prec.mat,scale,ebic.gamma
     fastghs.res[which(abs(fastghs.res)<1e-5, arr.ind=T)] = 0
   }
   if(include.GHS){
-    ghs.res = GHS(t(y)%*%y,n,burnin=100,nmc=1000)
-    theta.est.ghs = cov2cor(apply(ghs.res$thetas.sampled, c(1,2), mean))
-    # Threshold to get comparable sparsity
-    theta.est.off.diag.ghs = theta.est.ghs
-    diag(theta.est.off.diag.ghs) = NA
-    theta.est.ghs[which(abs(theta.est.ghs) < quantile(abs(theta.est.off.diag.ghs),1-tailoredGlasso::sparsity(fastghs.res!=0),na.rm = T), arr.ind = T)] = 0
-    ghs.res = theta.est.ghs
+    invalid=T
+    while(invalid){
+      ghs.res = tryCatch(GHS(t(y)%*%y,n,burnin=100,nmc=1000), error=function(s) NULL)
+      if(is.null(ghs.res)) {
+        invalid=T
+      }
+      else{
+        theta.est.ghs = cov2cor(apply(ghs.res$thetas.sampled, c(1,2), mean))
+        # Threshold to get comparable sparsity
+        theta.est.off.diag.ghs = theta.est.ghs
+        diag(theta.est.off.diag.ghs) = NA
+        theta.est.ghs[which(abs(theta.est.ghs) < quantile(abs(theta.est.off.diag.ghs),1-tailoredGlasso::sparsity(fastghs.res!=0),na.rm = T), arr.ind = T)] = 0
+        ghs.res = theta.est.ghs
+        invalid=F
+      }
+    }
   }
   est=list()
   # Results from GHS
