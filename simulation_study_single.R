@@ -4,13 +4,12 @@ source('simulation_functions/perform_time_simulation.R')
 
 # Write print function
 
-nCores = 5 # If using HPC
+nCores = 20 # If using HPC
 
 # Perform simulation study
 
-perform_GHS_sims = FALSE
+perform_GHS_sims = TRUE
 perform_larger_sims = FALSE
-perform_time_sims = TRUE
 
 # 20 simulations per case
 N = 20
@@ -45,7 +44,7 @@ if(perform_GHS_sims){
   save(res.fast, file="data/fastGHS_simulations.Rdata")
   
   # Print results
-  print_results_fastGHS(res.fast, show.interval=F, show.sd=F)
+  #print_results_fastGHS(res.fast, show.interval=F, show.sd=F)
 }
 
 if(perform_larger_sims){ # Not used
@@ -65,7 +64,7 @@ if(perform_larger_sims){ # Not used
   res.fast = list(res.5,res.6)
   save(res.fast, file="data/fastGHS_simulations_large.Rdata")
   
-  print_results_fastGHS(res.fast, show.interval=F, show.sd=F, include.GHS = F)
+  #print_results_fastGHS(res.fast, show.interval=F, show.sd=F, include.GHS = F)
 }
 
 
