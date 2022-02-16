@@ -182,6 +182,9 @@ print(res.joint.1, k=1, edges=t(combn(1:p.1, 2)))
 
 # As we see, no edges fell outside the intervals => valid joint analysis
 
+# Results to save
+plot(res.joint.1, k=1)
+plot(res.joint.1, k=2)
 
 
 # EXAMPLE 2: two datasets from two completely unrelated distributions ------------------------------------------------------------------
@@ -220,8 +223,8 @@ set.seed(123)
 load('bootstrap_examples/data/bootsim2.RData')
 
 # Posterior checks
-plot(res.joint.2,k=1)
-plot(res.joint.2,k=2)
+plot(res.joint.2,k=1) # Save as bootex_2diff1
+plot(res.joint.2,k=2) # Save as bootex_2diff2
 
 
 print(res.joint.2,k=1)
@@ -352,28 +355,26 @@ theta.true.4.6 = data.sf.4.6$omega # The precision matrix
 theta.true.4.6[which(theta.true.4.6<10e-5,arr.ind=T)]=0  
 x.sf.scaled.4.6 = scale(mvtnorm::rmvnorm(n.4.6, sigma = data.sf.4.6$sigma)) # Generate new data
 
-# Use jointGHS on the four related data sets
+# Use jointGHS on the six related data sets
 set.seed(12345)
 #res.joint.4 = jointGHS::jointGHS(list(x.sf.scaled.4, x.sf.scaled.4.2, x.sf.scaled.4.3, x.sf.scaled.4.4, x.sf.scaled.4.5,x.sf.scaled.4.6), AIC_selection = T, epsilon = 1e-3, AIC_eps = 0.1,B=1000, boot_check=TRUE, boot_lambda = F)
 #save(res.joint.4,file='bootstrap_examples/data/bootsim4.RData')
 load('bootstrap_examples/data/bootsim4.RData')
 
 # Posterior checks
-plot(res.joint.4,k=1)
+plot(res.joint.4,k=1) # Save as bootex_oneout_first
 plot(res.joint.4,k=2)
 plot(res.joint.4,k=3)
 plot(res.joint.4,k=4)
 plot(res.joint.4,k=5)
-png('bootstrap_examples/Figures/bootex_oneout.png', width=1200, height =1200)
 plot(res.joint.4,k=6) # Save as bootex_oneout
-dev.off()
 
-print(res.joint.4,k=1)
+print(res.joint.4,k=1) # Output saved as bootex_output_print_first
 print(res.joint.4,k=2)
 print(res.joint.4,k=3)
 print(res.joint.4,k=4)
 print(res.joint.4,k=5)
-print(res.joint.4,k=6)
+print(res.joint.4,k=6) # Output saved as bootex_output_print
 
 # The corresponding theta vs NuInv plot
 
