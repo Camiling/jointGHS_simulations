@@ -34,7 +34,7 @@ theta.true.1[which(theta.true.1<10e-5,arr.ind=T)]=0
 x.sf.1 = data.sf.1$data # Observed attributes. nxp matrix.
 x.sf.scaled.1= scale(x.sf.1) # Scale columns/variables.
 s.sf.scaled.1 = cov(x.sf.scaled.1) # Empirical covariance matrix
-data.sf.1$sparsity # True sparsity: 0.04
+data.sf.1$sparsity # True sparsity: 0.02
 cov2cor(theta.true.1)[1:5,1:5]          
 #[,1]      [,2]      [,3]      [,4]      [,5]
 #[1,] 1.0000000 0.2290578 0.0000000 0.0000000 0.0000000
@@ -96,9 +96,10 @@ truth.all = truth.all[upper.tri(truth.all)]
 
 df.plot.ssjgl = data.frame(network1=theta.1.ssjgl.upper, network2 = theta.2.ssjgl.upper,truth=factor(truth.all))
 df.plot.jointGHS = data.frame(network1=theta1.est.joint.upper, network2=theta2.est.joint.upper,truth=factor(truth.all))
-g1 = ggplot2::ggplot(df.plot.jointGHS, aes(y=network2,x=network1))+ labs(title="jointGHS")+theme(plot.title = element_text(hjust = 0.5))+
-  geom_point(aes(colour=truth, shape=truth)) + geom_hline(yintercept=0, linetype='dashed', color='darkgrey') + geom_vline(xintercept=0,linetype='dashed', color='darkgrey') + theme(legend.position = "none")
-g2 = ggplot2::ggplot(df.plot.ssjgl, aes(x =network1, y = network2))+ labs(title="SSJGL")+theme(plot.title = element_text(hjust = 0.5))+
+g1 = ggplot2::ggplot(df.plot.jointGHS, aes(y=network2,x=network1))+ labs(title="jointGHS")+
+  geom_point(aes(colour=truth, shape=truth)) + geom_hline(yintercept=0, linetype='dashed', color='darkgrey') + geom_vline(xintercept=0,linetype='dashed', color='darkgrey') + 
+  theme_bw()+theme(plot.title = element_text(hjust = 0.5),legend.position = "none",text = element_text(size = 15))
+g2 = ggplot2::ggplot(df.plot.ssjgl, aes(x =network1, y = network2))+ labs(title="SSJGL")+theme_bw()+theme(plot.title = element_text(hjust = 0.5),text = element_text(size = 15))+
   geom_point(aes(colour=truth,shape=truth)) + geom_hline(yintercept=0, linetype='dashed', color='darkgrey') + geom_vline(xintercept=0,linetype='dashed', color='darkgrey')
 
 tmp = ggplot2::ggplot_gtable(ggplot2::ggplot_build(g2))
@@ -106,7 +107,7 @@ leg = which(sapply(tmp$grobs, function(x) x$name) == "guide-box")
 legend = tmp$grobs[[leg]]
 g2 = g2 + theme(legend.position = "none")
 
-pdf('plots/SSJGLvsJointGHS.pdf',13,6)
+pdf('plots/SSJGLvsJointGHS.pdf',15,6)
 gridExtra::grid.arrange(g1,g2,legend,ncol=3,widths=c(6,6,1))
 dev.off()
 
@@ -135,7 +136,7 @@ df.plot.2 = data.frame(theta=c(theta.offdiag.1, theta.offdiag.2), Lambda_sq = c(
 p.lambda = ggplot2::ggplot(df.plot.2, aes(y=Lambda_sq,x=NuInv))+ labs(title=" ")+theme(plot.title = element_text(hjust = 0.5))+
   geom_point(aes(colour=estimate, shape=truth)) + scale_color_manual(values=c("darkorange", "darkturquoise"))+ 
   geom_hline(yintercept=0, linetype='dashed', color='darkgrey') + geom_vline(xintercept=0,linetype='dashed', color='darkgrey')                     
-p.theta = ggplot2::ggplot(df.plot.2, aes(y=theta,x=NuInv))+ labs(title=" ")+theme(plot.title = element_text(hjust = 0.5))+
+p.theta = ggplot2::ggplot(df.plot.2, aes(y=theta,x=NuInv))+ labs(title=" ")+theme_bw()+theme(plot.title = element_text(hjust = 0.5),text = element_text(size = 15))+
   geom_point(aes(colour=estimate, shape=truth))+ scale_color_manual(values=c("darkorange", "darkturquoise")) + 
   geom_hline(yintercept=0, linetype='dashed', color='darkgrey') + geom_vline(xintercept=0,linetype='dashed', color='darkgrey')                
 

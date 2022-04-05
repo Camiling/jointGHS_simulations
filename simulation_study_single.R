@@ -41,10 +41,11 @@ if(perform_GHS_sims){
   
   # Save results
   res.fast = list(res.1, res.2, res.3, res.4)
-  save(res.fast, file="data/fastGHS_simulations.Rdata")
+  #save(res.fast, file="data/fastGHS_simulations.Rdata")
+  load("data/fastGHS_simulations.Rdata")
   
   # Print results
-  #print_results_fastGHS(res.fast, show.interval=F, show.sd=F)
+  print_results_fastGHS(res.fast, show.interval=F, show.sd=T)
 }
 
 if(perform_larger_sims){ # Not used
@@ -62,9 +63,10 @@ if(perform_larger_sims){ # Not used
   
   # Save results
   res.fast = list(res.5,res.6)
-  save(res.fast, file="data/fastGHS_simulations_large.Rdata")
+  #save(res.fast, file="data/fastGHS_simulations_large.Rdata")
+  load("data/fastGHS_simulations_large.Rdata")
   
-  #print_results_fastGHS(res.fast, show.interval=F, show.sd=F, include.GHS = F)
+  print_results_fastGHS(res.fast, show.interval=F, show.sd=T, include.GHS = F)
 }
 
 

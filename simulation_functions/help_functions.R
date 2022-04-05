@@ -678,3 +678,11 @@ print_results_fastGHS_show_SD = function(obj.list,include.glasso=TRUE, include.G
 
 
 
+gaussianAIC <- function(sample.cov, theta, n) {
+  p <- nrow(theta)
+  theta2 <- theta
+  diag(theta2) <- rep(0, p)
+  d <- sum(theta2 != 0) / 2
+  return(-2 * tailoredGlasso::gaussianloglik(sample.cov, theta, n) + 2 * d)
+}
+

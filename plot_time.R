@@ -1,3 +1,4 @@
+rm(list=ls())
 source('simulation_functions/perform_fastGHS_simulation.R')
 source('simulation_functions/help_functions.R')
 source('simulation_functions/perform_time_simulation.R')
@@ -15,8 +16,8 @@ df.time = data.frame(time=c(time.res[[1]], time.res[[2]]), p=rep(p,2),
 
 
 pdf(file='plots/time_small.pdf',8,8)
-ggplot2::ggplot(df.time, aes(y=time, x=p, group=method))+ labs(title=" ")+theme(plot.title = element_text(hjust = 0.5))+
-  geom_line(aes(colour=method, linetype=method))+ scale_color_manual(values=c("azure4", "darkgray"))+
+ggplot2::ggplot(df.time, aes(y=time, x=p, group=method))+ labs(title=" ")+theme_bw()+theme(plot.title = element_text(hjust = 0.5),text = element_text(size = 15))+
+  geom_line(aes(colour=method, linetype=method), size=1)+ scale_color_manual(values=c("azure4", "darkgray"))+
   labs(y="CPU time (s)")+ scale_x_continuous(breaks = p)+ scale_y_continuous(breaks = seq(0,60,by=10))
 dev.off()
 
@@ -28,8 +29,8 @@ df.time.large = data.frame(time=c(time.res.large), p=p,
 
 
 pdf(file='plots/time_large.pdf',8,8)
-ggplot2::ggplot(df.time.large, aes(y=time, x=p, group=method))+ labs(title=" ")+theme(plot.title = element_text(hjust = 0.5))+
-  geom_line(aes(colour=method, linetype=method))+ scale_color_manual(values=c("azure4"))+
+ggplot2::ggplot(df.time.large, aes(y=time, x=p, group=method))+ labs(title=" ")+theme_bw()+theme(plot.title = element_text(hjust = 0.5),text = element_text(size = 15))+
+  geom_line(aes(colour=method, linetype=method), size=1)+ scale_color_manual(values=c("azure4"))+
   labs(y="CPU time (s)")+ scale_x_continuous(breaks = p[3:8]) #+ scale_y_continuous(breaks = seq(0,60,by=10))
 dev.off()
 
