@@ -97,17 +97,17 @@ truth.all = truth.all[upper.tri(truth.all)]
 df.plot.ssjgl = data.frame(network1=theta.1.ssjgl.upper, network2 = theta.2.ssjgl.upper,truth=factor(truth.all))
 df.plot.jointGHS = data.frame(network1=theta1.est.joint.upper, network2=theta2.est.joint.upper,truth=factor(truth.all))
 g1 = ggplot2::ggplot(df.plot.jointGHS, aes(y=network2,x=network1))+ labs(title="jointGHS")+
-  geom_point(aes(colour=truth, shape=truth)) + geom_hline(yintercept=0, linetype='dashed', color='darkgrey') + geom_vline(xintercept=0,linetype='dashed', color='darkgrey') + 
-  theme_bw()+theme(plot.title = element_text(hjust = 0.5),legend.position = "none",text = element_text(size = 15))
-g2 = ggplot2::ggplot(df.plot.ssjgl, aes(x =network1, y = network2))+ labs(title="SSJGL")+theme_bw()+theme(plot.title = element_text(hjust = 0.5),text = element_text(size = 15))+
-  geom_point(aes(colour=truth,shape=truth)) + geom_hline(yintercept=0, linetype='dashed', color='darkgrey') + geom_vline(xintercept=0,linetype='dashed', color='darkgrey')
+  geom_point(aes(colour=truth, shape=truth), size=3) + geom_hline(yintercept=0, linetype='dashed', color='darkgrey') + geom_vline(xintercept=0,linetype='dashed', color='darkgrey') + 
+  theme_bw()+theme(plot.title = element_text(hjust = 0.5),legend.position = "none",text = element_text(size = 17))
+g2 = ggplot2::ggplot(df.plot.ssjgl, aes(x =network1, y = network2))+ labs(title="SSJGL")+theme_bw()+theme(plot.title = element_text(hjust = 0.5),text = element_text(size = 17))+
+  geom_point(aes(colour=truth,shape=truth), size=3) + geom_hline(yintercept=0, linetype='dashed', color='darkgrey') + geom_vline(xintercept=0,linetype='dashed', color='darkgrey')
 
 tmp = ggplot2::ggplot_gtable(ggplot2::ggplot_build(g2))
 leg = which(sapply(tmp$grobs, function(x) x$name) == "guide-box")
 legend = tmp$grobs[[leg]]
 g2 = g2 + theme(legend.position = "none")
 
-pdf('plots/SSJGLvsJointGHS.pdf',15,6)
+pdf('plots/SSJGLvsJointGHS.pdf',16,6)
 gridExtra::grid.arrange(g1,g2,legend,ncol=3,widths=c(6,6,1))
 dev.off()
 
@@ -136,8 +136,8 @@ df.plot.2 = data.frame(theta=c(theta.offdiag.1, theta.offdiag.2), Lambda_sq = c(
 p.lambda = ggplot2::ggplot(df.plot.2, aes(y=Lambda_sq,x=NuInv))+ labs(title=" ")+theme(plot.title = element_text(hjust = 0.5))+
   geom_point(aes(colour=estimate, shape=truth)) + scale_color_manual(values=c("darkorange", "darkturquoise"))+ 
   geom_hline(yintercept=0, linetype='dashed', color='darkgrey') + geom_vline(xintercept=0,linetype='dashed', color='darkgrey')                     
-p.theta = ggplot2::ggplot(df.plot.2, aes(y=theta,x=NuInv))+ labs(title=" ")+theme_bw()+theme(plot.title = element_text(hjust = 0.5),text = element_text(size = 15))+
-  geom_point(aes(colour=estimate, shape=truth))+ scale_color_manual(values=c("darkorange", "darkturquoise")) + 
+p.theta = ggplot2::ggplot(df.plot.2, aes(y=theta,x=NuInv))+ labs(title=" ")+theme_bw()+theme(plot.title = element_text(hjust = 0.5),text = element_text(size = 17))+
+  geom_point(aes(colour=estimate, shape=truth), size=3)+ scale_color_manual(values=c("darkorange", "darkturquoise")) + 
   geom_hline(yintercept=0, linetype='dashed', color='darkgrey') + geom_vline(xintercept=0,linetype='dashed', color='darkgrey')                
 
 pdf('plots/Theta_vs_NuInvJointGHS.pdf',8,7)

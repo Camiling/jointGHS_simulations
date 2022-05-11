@@ -121,14 +121,14 @@ df.K.sd = data.frame(precision=c(precisions.K2, precisions.K2.ghs,precisions.K4,
                   disagreement=c(rep(perc.disagreement,6)))
 
 g.prec.sd=ggplot2::ggplot(df.K.sd, aes(y=precision, x=disagreement, group=method, colour=method))+ labs(title=" ")+theme(plot.title = element_text(hjust = 0.5))+
-  geom_line(aes(colour=method, linetype=method))+ scale_color_manual(values=c("darkolivegreen", "darkolivegreen3"))+
+  geom_line(aes(colour=method, linetype=method), size=1)+ scale_color_manual(values=c("darkolivegreen", "darkolivegreen3"))+
   labs(x='Disagreement %')+ scale_x_continuous(breaks = perc.disagreement) + facet_wrap(~K) + #+ scale_y_continuous(breaks = seq(0,60,by=10))
-  geom_errorbar(aes(ymin=precision-sd.prec, ymax=precision+sd.prec))+ theme(legend.position = "none")
+  geom_errorbar(aes(ymin=precision-sd.prec, ymax=precision+sd.prec))+theme_bw()+ theme(legend.position = "none",text = element_text(size = 15))
 
 g.rec.sd = ggplot2::ggplot(df.K.sd, aes(y=recall, x=disagreement, group=method,colour=method))+ labs(title=" ")+theme(plot.title = element_text(hjust = 0.5))+
-  geom_line(aes(colour=method, linetype=method))+ scale_color_manual(values=c("darkolivegreen", "darkolivegreen3"))+
+  geom_line(aes(colour=method, linetype=method), size=1)+ scale_color_manual(values=c("darkolivegreen", "darkolivegreen3"))+
   labs(x='Disagreement %')+ scale_x_continuous(breaks = perc.disagreement) + facet_wrap(~K)+ #+ scale_y_continuous(breaks = seq(0,60,by=10))
-  geom_errorbar(aes(ymin=recall-sd.rec, ymax=recall+sd.rec))+ theme(legend.position = "none")
+  geom_errorbar(aes(ymin=recall-sd.rec, ymax=recall+sd.rec))+ theme_bw()+theme(legend.position = "none",text = element_text(size = 15))
 
 pdf(file='plots/joint_vs_single_SD.pdf',10,8)
 gridExtra::grid.arrange(g.prec.sd,g.rec.sd,legend,ncol=1,heights=c(6,6,1))
