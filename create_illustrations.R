@@ -1,3 +1,4 @@
+rm(list = ls())
 library(jointGHS) # Must be installed from Camiling/jointGHS on github
 library(fastGHS) # Must be installed from Camiling/fastGHS
 library(tailoredGlasso) # Must be installed from Camiling/tailoredGlasso

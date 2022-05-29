@@ -65,7 +65,7 @@ GHS =  function(S,n,burnin=500,nmc=3000){
         return(list(inv_C,s_21))
       })
       #mu_i = -solve(inv_C,s_21)
-      beta = mu_i+ solve(inv_C_chol,rnorm(p-1))
+      beta = mu_i+ solve(inv_C_chol,rnorm(p-1)) # This is where it fails for too high dim data
       #kkk=c(0.1156077, 1.7215140, 0.10147592)
       #beta = mu_i+ solve(inv_C_chol,kkk)
       omega_12 = beta
