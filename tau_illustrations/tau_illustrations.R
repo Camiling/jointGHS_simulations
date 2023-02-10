@@ -177,6 +177,55 @@ pdf('plots/traceplot_fastGHS_3.pdf')
 plot.trace.3
 dev.off()
 
+plot.trace.3.2 <- ggplot2::ggplot(na.omit(trace.df.3),  aes(y=theta,x=tau_sq, group=edge))+ labs(title=" ")+theme_bw()+theme(plot.title = element_text(hjust = 0.5),text = element_text(size = 15))+
+  geom_line(aes(colour=truth, group=edge, linetype=truth))+scale_linetype_manual(values=c("dashed", "solid")) +scale_x_continuous(trans='log10',breaks = c(0,0.001, 0.01,0.1, 1))                         
+
+pdf('plots/traceplot_fastGHS_3_logscale.pdf')
+plot.trace.3.2 
+dev.off()
+
+# More zoomed in version:
+
+# Perform GHS for a range of tau_sq values
+tau_sq_vals.3.2 = c(seq(0.0001,0.015,length.out = 200),seq(0.015,0.15,length.out = 200))
+theta.est.all.3.2 = array(0,c(p.3,p.3,length(tau_sq_vals.3.2)))
+for(i in 1:length(tau_sq_vals.3.2)){
+  res <- fastGHS::fastGHS(x.sf.scaled.3,tau_sq = tau_sq_vals.3.2[i],epsilon = 1e-3, fix_tau=TRUE, verbose = F)
+  theta.est = res$theta
+  theta.est[which(abs(theta.est)<1e-5, arr.ind=T)]=0
+  prec.mat = cov2cor(theta.est)
+  theta.est.all.3.2[,,i] = prec.mat
+  cat(i, '\n')
+}
+
+# Create trace plot
+theta.est.upper.3.2 = theta.est.all.3.2
+for(i in 1:length(tau_sq_vals.3.2)){
+  mat.temp = theta.est.all.3.2[,,i]
+  mat.temp[!upper.tri(theta.est.upper.3.2[,,i])] = NA
+  theta.est.upper.3.2[,,i] = mat.temp
+}
+
+trace.df.3.2 = data.frame(theta=c(theta.est.upper.3.2), tau_sq=sort(rep(tau_sq_vals.3.2, length(mark.mat.3))), truth=factor(rep(c(mark.mat.3), length(tau_sq_vals.3.2))), 
+                        edge= factor(rep(1:length(mark.mat.3), length(tau_sq_vals.3.2))))
+
+plot.trace.3.2.zoom <- ggplot2::ggplot(na.omit(trace.df.3.2),  aes(y=theta,x=tau_sq, group=edge))+ labs(title=" ")+theme_bw()+theme(plot.title = element_text(hjust = 0.5),text = element_text(size = 15))+
+  geom_line(aes(colour=truth, group=edge, linetype=truth))+scale_linetype_manual(values=c("dashed", "solid")) +scale_x_continuous(trans='log10',breaks = c(0,0.001, 0.01,0.1, 1))                         
+
+pdf('plots/traceplot_fastGHS_3_logscale_smaller.pdf')
+plot.trace.3.2.zoom
+dev.off()
+
+# Combined plot
+library(patchwork)
+
+pdf('plots/traceplot_comb.pdf', 10,5)
+plot.trace.3.2.zoom + theme(legend.position="none")+ ggtitle('(a)') + (plot.trace.3 + ggtitle('(b)')) 
+dev.off()
+
+
+
+
 
 # Plot tau vs sparsity, precision and recall  ---------------------------------------------------------
 

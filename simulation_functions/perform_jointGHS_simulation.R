@@ -37,10 +37,11 @@ source("SSJGL/R/gete.R")
 #' @param scale should the data be scaled?
 #' @param save.res.jointGHS should Lambda, Nu and Theta be saved for all N simulations? Requires a lot of memory. Default FALSE.
 #' @param singleVSjoint is the simulation comparing single and joint GHS?
+#' @param save.edgeagreement should the number of edges the estimates agree on be saved?
 #' @return simulation results, including sparsity, precision, recall and specificity
 perform_jointGHS_simulation = function(K, n.vals, p, N=100, seeds=sample(1:1000,N), nCores = 3, frac.disagreement = 0, method='symmetric', 
                                        include.jointGHS=TRUE, include.GHS=TRUE, include.SSJGL=TRUE, include.JGL = TRUE, penalize.diagonal=FALSE ,verbose=TRUE, scale=TRUE, 
-                                       save.res.jointGHS = FALSE, singleVSjoint=FALSE){
+                                       save.res.jointGHS = FALSE, singleVSjoint=FALSE, save.edgeagreement=F){
  
   res=list()
   # JointGHS results
@@ -49,6 +50,8 @@ perform_jointGHS_simulation = function(K, n.vals, p, N=100, seeds=sample(1:1000,
   res$specificities =  matrix(0,N,K)
   res$recalls =  matrix(0,N,K)
   res$matrix.distances =  matrix(0,N,K)
+  res$edge.agreement = rep(0,K)
+  res$n.edges.est =  matrix(0,N,K)
   if(save.res.jointGHS){
     res$theta = list()
     res$E_NuInv = list()
@@ -60,6 +63,8 @@ perform_jointGHS_simulation = function(K, n.vals, p, N=100, seeds=sample(1:1000,
   res$specificities.ssjgl =  matrix(0,N,K)
   res$recalls.ssjgl =  matrix(0,N,K)
   res$matrix.distances.ssjgl =  matrix(0,N,K)
+  res$edge.agreement.ssjgl = rep(0,K)
+  res$n.edges.est.ssjgl =  matrix(0,N,K)
   
   # JGL results (tuned by AIC)
   res$opt.sparsities.jgl = matrix(0,N,K)
@@ -67,6 +72,8 @@ perform_jointGHS_simulation = function(K, n.vals, p, N=100, seeds=sample(1:1000,
   res$specificities.jgl =  matrix(0,N,K)
   res$recalls.jgl =  matrix(0,N,K)
   res$matrix.distances.jgl =  matrix(0,N,K)
+  res$edge.agreement.jgl = rep(0,K)
+  res$n.edges.est.jgl =  matrix(0,N,K)
   
   # GHS results
   res$opt.sparsities.ghs = matrix(0,N,K)
@@ -134,7 +141,7 @@ perform_jointGHS_simulation = function(K, n.vals, p, N=100, seeds=sample(1:1000,
     jointGHS_simulation_one_iteration(n.vals=n.vals,cov.matrices=cov.matrices,prec.matrices=prec.matrices,scale=scale,
                                      include.jointGHS=include.jointGHS, include.GHS=include.GHS, include.SSJGL=include.SSJGL, include.JGL=include.JGL, 
                                      penalize.diagonal=penalize.diagonal,seed=seeds[i], 
-                                     save.res.jointGHS = save.res.jointGHS,singleVSjoint);
+                                     save.res.jointGHS = save.res.jointGHS,singleVSjoint, save.edgeagreement=save.edgeagreement);
   }
   registerDoSEQ()
   
@@ -149,6 +156,10 @@ perform_jointGHS_simulation = function(K, n.vals, p, N=100, seeds=sample(1:1000,
       res$precisions[i,] = est.tmp$precisions
       res$recalls[i,] = est.tmp$recalls
       res$specificities[i,] =  est.tmp$specificities
+      if(save.edgeagreement){
+        res$edge.agreement[i] = est.tmp$edge.agreement
+        res$n.edges.est[i,] =  est.tmp$n.edges.est
+      }
     }
     if(save.res.jointGHS){
       res$E_NuInv[[i]] = est.tmp$E_NuInv # A K by K matrix
@@ -162,6 +173,10 @@ perform_jointGHS_simulation = function(K, n.vals, p, N=100, seeds=sample(1:1000,
       res$precisions.jgl[i,] = est.tmp$precisions.jgl
       res$recalls.jgl[i,] = est.tmp$recalls.jgl
       res$specificities.jgl[i,] =  est.tmp$specificities.jgl 
+      if(save.edgeagreement){
+        res$edge.agreement.jgl[i] = est.tmp$edge.agreement.jgl
+        res$n.edges.est.jgl[i,] =  est.tmp$n.edges.est.jgl
+      }
     }
     # Results from ssjgl
     if(include.SSJGL){
@@ -170,6 +185,10 @@ perform_jointGHS_simulation = function(K, n.vals, p, N=100, seeds=sample(1:1000,
       res$precisions.ssjgl[i,] = est.tmp$precisions.ssjgl
       res$recalls.ssjgl[i,] = est.tmp$recalls.ssjgl
       res$specificities.ssjgl[i,] =  est.tmp$specificities.ssjgl 
+      if(save.edgeagreement){
+        res$edge.agreement.ssjgl[i] = est.tmp$edge.agreement.ssjgl
+        res$n.edges.est.ssjgl[i,] =  est.tmp$n.edges.est.ssjgl
+      }
     }
     # Results from ghs
     if(include.GHS){
@@ -187,6 +206,10 @@ perform_jointGHS_simulation = function(K, n.vals, p, N=100, seeds=sample(1:1000,
       res$mean.recalls = colMeans(res$recalls)
       res$mean.specificities =  colMeans(res$specificities)
       res$mean.matrix.distances = colMeans(res$matrix.distances)
+      if(save.edgeagreement){
+        res$mean.edge.agreement = mean(res$edge.agreement)
+        res$mean.n.edges.est=  colMeans(res$n.edges.est)
+      }
   }
   # Mean results from JGL
   if(include.JGL){
@@ -195,6 +218,10 @@ perform_jointGHS_simulation = function(K, n.vals, p, N=100, seeds=sample(1:1000,
     res$mean.recalls.jgl = colMeans(res$recalls.jgl)
     res$mean.specificities.jgl =  colMeans(res$specificities.jgl)
     res$mean.matrix.distances.jgl = colMeans(res$matrix.distances.jgl)
+    if(save.edgeagreement){
+      res$mean.edge.agreement.jgl = mean(res$edge.agreement.jgl)
+      res$mean.n.edges.est.jgl =  colMeans(res$n.edges.est.jgl)
+    }
   }
   # Mean results from SSJGL
   if(include.SSJGL){
@@ -203,6 +230,10 @@ perform_jointGHS_simulation = function(K, n.vals, p, N=100, seeds=sample(1:1000,
     res$mean.recalls.ssjgl = colMeans(res$recalls.ssjgl)
     res$mean.specificities.ssjgl =  colMeans(res$specificities.ssjgl)
     res$mean.matrix.distances.ssjgl = colMeans(res$matrix.distances.ssjgl)
+    if(save.edgeagreement){
+      res$mean.edge.agreement.ssjgl = mean(res$edge.agreement.ssjgl)
+      res$mean.n.edges.est.ssjgl =  colMeans(res$n.edges.est.ssjgl)
+    }
   }
   # Mean results from GHS
   if(include.GHS){
@@ -222,7 +253,7 @@ perform_jointGHS_simulation = function(K, n.vals, p, N=100, seeds=sample(1:1000,
 # Function for performing one iteration -----------------------------------------
 
 jointGHS_simulation_one_iteration = function(n.vals,cov.matrices,prec.matrices,scale,include.jointGHS, include.GHS, include.SSJGL,include.JGL, 
-                                            penalize.diagonal,seed, save.res.jointGHS,singleVSjoint) {
+                                            penalize.diagonal,seed, save.res.jointGHS,singleVSjoint, save.edgeagreement) {
   y = list()
   K=length(n.vals)
   p=ncol(prec.matrices[[1]])
@@ -284,6 +315,10 @@ jointGHS_simulation_one_iteration = function(n.vals,cov.matrices,prec.matrices,s
     est$precisions =  sapply(1:K,FUN=function(k) precision(prec.matrices[[k]]!=0, abs(res.tmp[[k]])>1e-5))
     est$recalls =  sapply(1:K,FUN=function(k) recall(prec.matrices[[k]]!=0, abs(res.tmp[[k]])>1e-5 ))
     est$specificities =  sapply(1:K,FUN=function(k) specificity(prec.matrices[[k]]!=0, abs(res.tmp[[k]])>1e-5 ))
+    if(save.edgeagreement){
+      est$edge.agreement = (sum(apply(simplify2array(res.tmp), c(1,2), FUN = function(m) sum(abs(m)>1e-5))==K)-p)/2 # How many edges common to all K nets?
+      est$n.edges.est =  sapply(1:K,FUN=function(k) (sum(abs(res.tmp[[k]])>1e-5)-p)/2)
+    }
   }
   # Results from SSJGL
   if(include.SSJGL){
@@ -293,6 +328,10 @@ jointGHS_simulation_one_iteration = function(n.vals,cov.matrices,prec.matrices,s
     est$precisions.ssjgl = sapply(1:K,FUN=function(k) precision(prec.matrices[[k]]!=0, ssjgl.tmp[[k]]!=0))
     est$recalls.ssjgl = sapply(1:K,FUN=function(k) recall(prec.matrices[[k]]!=0, ssjgl.tmp[[k]]!=0))
     est$specificities.ssjgl = sapply(1:K,FUN=function(k) specificity(prec.matrices[[k]]!=0, ssjgl.tmp[[k]]!=0))
+    if(save.edgeagreement){
+      est$edge.agreement.ssjgl = (sum(apply(simplify2array(ssjgl.tmp), c(1,2), FUN = function(m) sum(abs(m)>1e-5))==K)-p)/2 # How many edges common to all K nets?
+      est$n.edges.est.ssjgl =  sapply(1:K,FUN=function(k) (sum(abs(ssjgl.tmp[[k]])>1e-5)-p)/2)
+    }
   }
   # Results from JGL
   if(include.JGL){
@@ -301,6 +340,10 @@ jointGHS_simulation_one_iteration = function(n.vals,cov.matrices,prec.matrices,s
     est$precisions.jgl = sapply(1:K,FUN=function(k) precision(prec.matrices[[k]]!=0, jgl.tmp$opt.fit[[k]]!=0))
     est$recalls.jgl = sapply(1:K,FUN=function(k) recall(prec.matrices[[k]]!=0, jgl.tmp$opt.fit[[k]]!=0))
     est$specificities.jgl = sapply(1:K,FUN=function(k) specificity(prec.matrices[[k]]!=0, jgl.tmp$opt.fit[[k]]!=0))
+    if(save.edgeagreement){
+      est$edge.agreement.jgl = (sum(apply(simplify2array(jgl.tmp$opt.fit), c(1,2), FUN = function(m) sum(m!=0))==K)-p)/2 # How many edges common to all K nets?
+      est$n.edges.est.jgl =  sapply(1:K,FUN=function(k) (sum(jgl.tmp$opt.fit[[k]]!=0)-p)/2)
+    }
   }
   # Results from GHS
   if(include.GHS){
@@ -313,6 +356,26 @@ jointGHS_simulation_one_iteration = function(n.vals,cov.matrices,prec.matrices,s
   return(est)
 }
 
+print_edgeDisagreement_jointGHS = function(obj.list,fracs.mutated){
+  # obj is a list of objects returned by perform_jointGHS_simulation.
+  # fracs.mutated is a vector of the mutated fraction in each simulation object
+  # show.distance: should the matrix distance be printed?
+  # show.specificity: should the matrix distance be printed?
+  # Function for printing mean sparsities, precisions, recalls and matrix distances when several data sets were generated.
+  # Note that we print the results for the different graphs on the same lines. 
+  K = length(obj.list[[1]]$mean.opt.sparsities)
+  # Loop over each scenario
+  for (i in 1:length(obj.list)){
+    obj=obj.list[[i]]
+    cat('Disagreement: ', 100*fracs.mutated[i], '\n')
+    cat('JGL: ')  
+    cat(round((1-2*obj$mean.edge.agreement.jgl/ (sum(obj$mean.n.edges.est.jgl)))*100), '\n')
+    cat('SSJGL: ')  
+    cat(round((1-2*obj$mean.edge.agreement.ssjgl/ (sum(obj$mean.n.edges.est.ssjgl)))*100), '\n')
+    cat('jointGHS: ')  
+    cat(round((1-2*obj$mean.edge.agreement/ (sum(obj$mean.n.edges.est)))*100), '\n')
+  }
+}
 
 
 

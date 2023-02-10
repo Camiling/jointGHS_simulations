@@ -113,6 +113,44 @@ pdf(file='plots/joint_comparison_all_prec.pdf',10,7)
 gridExtra::grid.arrange(g.prec.sd,legend,ncol=1,heights=c(7,1))
 dev.off()
 
+
+# Smaller SD bar
+
+g.prec.sd.smaller = ggplot2::ggplot(df.joint, aes(y=precision, x=disagreement, group=method, colour=method))+ labs(title=" ")+theme(plot.title = element_text(hjust = 0.5))+
+  geom_line(aes(colour=method, linetype=method), size=1)+ scale_color_manual(values=c("darkolivegreen", "darkblue", "lightblue"))+
+  labs(x='Disagreement %')+ scale_x_continuous(breaks = perc.disagreement) + facet_wrap(~graph) + #+ scale_y_continuous(breaks = seq(0,60,by=10))
+  geom_errorbar(aes(ymin=precision-sd.prec, ymax=precision+sd.prec),width=2) + theme(legend.position = "bottom")
+
+g.rec.sd.smaller = ggplot2::ggplot(df.joint, aes(y=recall, x=disagreement, group=method,colour=method))+ labs(title=" ")+theme(plot.title = element_text(hjust = 0.5))+
+  geom_line(aes(colour=method, linetype=method), size=1)+ scale_color_manual(values=c("darkolivegreen", "darkblue", "lightblue"))+
+  labs(x='Disagreement %')+ scale_x_continuous(breaks = perc.disagreement) + facet_wrap(~graph)+ #+ scale_y_continuous(breaks = seq(0,60,by=10))
+  geom_errorbar(aes(ymin=recall-sd.rec, ymax=recall+sd.rec),width=2)
+g.rec.sd.smaller  = g.rec.sd.smaller + theme_bw()+theme(legend.position = "none",text = element_text(size = 15))
+g.prec.sd.smaller = g.prec.sd.smaller + theme_bw()+theme(legend.position = "none",text = element_text(size = 15))
+
+pdf(file='plots/joint_comparison_all_SD_smallbar.pdf',7,8)
+gridExtra::grid.arrange(g.prec.sd.smaller,g.rec.sd.smaller,legend,ncol=1,heights=c(6,6,1))
+dev.off()
+
+# Only graph 2
+
+g.prec.sd.smaller.only2 = ggplot2::ggplot(df.joint[df.joint$graph=='Graph 2',], aes(y=precision, x=disagreement, group=method, colour=method))+ labs(title=" ")+theme(plot.title = element_text(hjust = 0.5))+
+  geom_line(aes(colour=method, linetype=method), size=1)+ scale_color_manual(values=c("darkolivegreen", "darkblue", "lightblue"))+
+  labs(x='Disagreement %')+ scale_x_continuous(breaks = perc.disagreement)  + #+ scale_y_continuous(breaks = seq(0,60,by=10))
+  geom_errorbar(aes(ymin=precision-sd.prec, ymax=precision+sd.prec),width=2) + theme(legend.position = "bottom")
+
+g.rec.sd.smaller.only2 = ggplot2::ggplot(df.joint[df.joint$graph=='Graph 2',], aes(y=recall, x=disagreement, group=method,colour=method))+ labs(title=" ")+theme(plot.title = element_text(hjust = 0.5))+
+  geom_line(aes(colour=method, linetype=method), size=1)+ scale_color_manual(values=c("darkolivegreen", "darkblue", "lightblue"))+
+  labs(x='Disagreement %')+ scale_x_continuous(breaks = perc.disagreement) + #+ scale_y_continuous(breaks = seq(0,60,by=10))
+  geom_errorbar(aes(ymin=recall-sd.rec, ymax=recall+sd.rec),width=2)
+g.rec.sd.smaller.only2  = g.rec.sd.smaller.only2 + theme_bw()+theme(legend.position = "none",text = element_text(size = 15))
+g.prec.sd.smaller.only2 = g.prec.sd.smaller.only2 + theme_bw()+theme(legend.position = "none",text = element_text(size = 15))
+
+pdf(file='plots/joint_comparison_all_SD_smallbar_only2.pdf',5,8)
+gridExtra::grid.arrange(g.prec.sd.smaller.only2,g.rec.sd.smaller.only2,legend,ncol=1,heights=c(6,6,1))
+dev.off()
+
+
 # plot without JGL
 
 g.prec.nojgl = ggplot2::ggplot(df.joint[df.joint$method!='JGL',], aes(y=precision, x=disagreement, group=method, colour=method))+ labs(title=" ")+theme(plot.title = element_text(hjust = 0.5))+

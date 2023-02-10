@@ -13,6 +13,38 @@ library(parallel)
 library(Rcpp)
 source('simulation_functions/perform_jointGHS_simulation.R')
 source('simulation_functions/help_functions.R')
+source('GHS/GHS.R')
+
+# Demonstrate that GHS MCMC fails for p=150, n=200 ----------------------------------------------------
+
+n=200
+p=150
+set.seed(12345)
+data.sf = huge::huge.generator(n=n, d=p,graph = 'scale-free',v=0.5,u=0.05) 
+g.true.sf= data.sf$theta # True adjacency matrix
+theta.true = data.sf$omega # The precision matrix
+theta.true[which(theta.true<10e-5,arr.ind=T)]=0  
+g.sf=graph.adjacency(data.sf$theta,mode="undirected",diag=F) # true igraph object
+x.sf = data.sf$data # Observed attributes. nxp matrix.
+x.sf.scaled = scale(x.sf) # Scale columns/variables.
+s.sf.scaled = cov(x.sf.scaled) # Empirical covariance matrix
+data.sf$sparsity # True sparsity: 0.013333
+# Look at precision matrix (partial correlations)
+cov2cor(theta.true[1:5,1:5])
+#[,1]      [,2]      [,3]      [,4]      [,5]
+#[1,] 1.0000000 0.1826553 0.0000000 0.0000000 0.0000000
+#[2,] 0.1826553 1.0000000 0.1826553 0.0000000 0.0000000
+#[3,] 0.0000000 0.1826553 1.0000000 0.1826553 0.1826553
+#[4,] 0.0000000 0.0000000 0.1826553 1.0000000 0.0000000
+#[5,] 0.0000000 0.0000000 0.1826553 0.0000000 1.0000000
+
+# Now the MCMC GHS fails, so we do not include any results from it here
+
+# Here Gibbs GHS fails:
+ghs.res.fix <- GHS(t(x.sf)%*%x.sf,n,burnin=100,nmc=1000)
+#Error in mu_i + solve(inv_C_chol, rnorm(p - 1)) : 
+#  non-numeric argument to binary operator
+
 
 # Demonstrate that JGL is not computationally feasible for K=10 -----------------------------
 

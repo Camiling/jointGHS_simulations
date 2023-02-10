@@ -392,7 +392,7 @@ print_results_jointGHS = function(obj.list,fracs.mutated, include.jointGHS=TRUE,
   }
 }
 
-print_results_jointGHS_show_SD = function(obj.list,fracs.mutated, include.jointGHS=TRUE, include.GHS=TRUE, include.SSJGL=TRUE, include.JGL=TRUE,show.distance=F,show.specificity=F){
+print_results_jointGHS_show_SD = function(obj.list,fracs.mutated, include.jointGHS=TRUE, include.GHS=TRUE, include.SSJGL=TRUE, include.JGL=TRUE,show.distance=F,show.specificity=F, show.edgedisagreement=F){
   # obj is a list of objects returned by perform_jointGHS_simulation.
   # fracs.mutated is a vector of the mutated fraction in each simulation object
   # show.distance: should the matrix distance be printed?
@@ -417,6 +417,9 @@ print_results_jointGHS_show_SD = function(obj.list,fracs.mutated, include.jointG
     }
     if(include.JGL){
       cat('  & JGL ')  
+      if(show.edgedisagreement){
+        cat('&', round((1-2*obj$mean.edge.agreement.jgl/ (sum(obj$mean.n.edges.est.jgl)))*100))
+      }
       for(k in 1:K){
         cat(' && ',round(obj$mean.opt.sparsities.jgl[k],3), '(',round(sd(obj$opt.sparsities.jgl[,k]),3),')',' & ',
             round(obj$mean.precisions.jgl[k],2),'(',round(sd(obj$precisions.jgl[,k]),2),')',' & ',
@@ -428,6 +431,9 @@ print_results_jointGHS_show_SD = function(obj.list,fracs.mutated, include.jointG
     }
     if(include.SSJGL){
       cat('  & SSJGL ')  
+      if(show.edgedisagreement){
+        cat('&', round((1-2*obj$mean.edge.agreement.ssjgl/ (sum(obj$mean.n.edges.est.ssjgl)))*100))
+      }
       for(k in 1:K){
         cat(' && ',round(obj$mean.opt.sparsities.ssjgl[k],3), '(',round(sd(obj$opt.sparsities.ssjgl[,k]),3),')',' & ',
             round(obj$mean.precisions.ssjgl[k],2),'(',round(sd(obj$precisions.ssjgl[,k]),2),')',' & ',
@@ -439,6 +445,9 @@ print_results_jointGHS_show_SD = function(obj.list,fracs.mutated, include.jointG
     }
     if(include.jointGHS){
       cat('  & jointGHS')
+      if(show.edgedisagreement){
+        cat('&', round((1-2*obj$mean.edge.agreement/ (sum(obj$mean.n.edges.est)))*100))
+      }
       for(k in 1:K){
         cat(' && ',round(obj$mean.opt.sparsities[k],3), '(',round(sd(obj$opt.sparsities[,k]),3),')',' & ',
             round(obj$mean.precisions[k],2),'(',round(sd(obj$precisions[,k]),2),')',' & ',
