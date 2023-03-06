@@ -162,6 +162,44 @@ perform_time_simulation_joint = function(p,K,n.vals,nCores=5){
   times.GemBag = unlist(res.list)
   
   return(list(times.jointGHS=times.jointGHS, times.SSJGL=times.SSJGL, times.JGL = times.JGL, times.GemBag = times.GemBag))
-   
 }
+
+#' Perform joint network simulation to assess time use
+#' 
+#' This function performs simulations, assessing time use for all joint methods
+#' 
+#' @return simulation results, including sparsity, precision, recall and specificity
+perform_time_simulation_joint_onlyjointGHS = function(p,K,n.vals,nCores=5){
+  n.p = length(p)
+  # Create data sets
+  data.sets=list()
+  for(i in 1:length(p)){
+    data.tmp = list()
+    huge.init = huge.generator(n.vals[1],p[i],graph='scale-free',verbose = F,v=1,u=0.01)
+    data.tmp[[1]] = scale(huge.init$data)
+    for(k in 2:K){
+      valid=F
+      while(!valid){ # Ensure valid precision matrices
+        huge.tmp = mutate.graph(huge.init,fraction=0.5,scale=T, generate.data = F)
+        cov.mat = huge.tmp$cov.mat
+        # Avoid rounding errors leading to matrices not being symmetric
+        if(!matrixcalc::is.symmetric.matrix(cov.mat)){
+          cov.mat = round(cov.mat,8)
+        }
+        valid = matrixcalc::is.positive.definite(cov.mat)
+      }
+      data.tmp[[k]] = scale(mvtnorm::rmvnorm(n.vals[k], mean=rep(0,p[i]), cov.mat))
+    }
+    data.sets[[i]] = data.tmp
+  }
+  # Perform jointGHS
+  registerDoParallel(nCores)
+  res.list = foreach (i=1:n.p) %dopar% {
+    system.time(jointGHS::jointGHS(X=data.sets[[i]], AIC_selection = F,fix_tau = T, tau_sq= 1, epsilon = 1e-3 , verbose=FALSE))['elapsed'];
+  }
+  registerDoSEQ()
+  times.jointGHS = unlist(res.list)
+  return(times.jointGHS)
+}
+
 

@@ -117,4 +117,29 @@ fit.ssjgl = SSJGL(Y=y.2,penalty=penalty,lambda0=1, lambda1=lambda1,lambda2=lambd
 
 # This is feasible.
 
+# Check partial correlation magnitude as described in Danaher et al.s simulation studies -----------------------
+
+n=200
+p=500
+# Create scale free graph structure with 500 edges, as proposed by Danaher
+set.seed(123)
+data.sf = huge::huge.generator(n=n, d=p,graph = 'scale-free',v=0.5,u=0.05) 
+data.sf$sparsity
+
+g = as.matrix(data.sf$theta!=0)
+g=g*sample(c(runif(p*p,0.1,0.4), runif(p*p,-0.4, -0.1)), p*p)
+diag(g) = 0
+g = g/(1.5*rowSums(abs(g)))
+diag(g) = 1
+g = (g + t(g))/2
+matrixcalc::is.positive.definite(g)
+isSymmetric(g)
+det(g)
+g = Matrix::nearPD(g)$mat
+
+a = solve(g)
+z = 0.6*cov2cor(a)
+diag(z) = 1
+hist(z)
+table(round(z,1))
 
