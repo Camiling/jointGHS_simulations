@@ -21,6 +21,7 @@ if(run.K2){
   # Case 1: datasets from same distribution
   set.seed(1234)
   res.1 = perform_jointGHS_simulation(K,n.vals, p, N, frac.disagreement = fracs.disagreement[1], nCores = nCores)
+  cat('ok \n')
   
   # Case 2: datasets from similar distributions (80% edge agreement)
   set.seed(1234)
