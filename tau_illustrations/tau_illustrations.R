@@ -3,7 +3,7 @@ source('simulation_functions/help_functions.R')
 library(ggplot2)
 library(network)
 library(GGally)
-library(JoStARS)
+library(stabJGL)
 
 # Make illustrations of the behavior of tau
 

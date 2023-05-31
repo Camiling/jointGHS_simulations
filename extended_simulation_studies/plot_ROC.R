@@ -24,7 +24,7 @@ for(j in 1:2){
                     method = c(rep('jointGHS', n.jointGHS), rep('SSJGL', n.SSJGL),rep('JGL', n.JGL),rep('GemBag', n.gembag)))
   df.0 = df.0 %>% filter(recall <= max(res.ROC.jointGHS[[1]]$mean.recalls[j,])+0.01)
   plots.0[[j]] = ggplot(df.0, aes(x=recall, y=precision, color=method, linetype=method))+geom_line(data= df.0 %>% filter(method %in% c('jointGHS','SSJGL','JGL')),linewidth=1)+
-    geom_point(data= df.0 %>% filter(method %in% c('GemBag')), size=2)+ theme_bw()+ scale_color_manual(values=c('azure4',"navyblue","firebrick3","palegreen4"))+
+    geom_point(data= df.0 %>% filter(method %in% c('GemBag')), size=2)+ theme_bw()+ scale_color_manual(values=c('thistle3','lightskyblue3','dodgerblue','darkkhaki'))+
     ggtitle('0% disagreement')+theme(legend.position = 'none',plot.title = element_text(hjust = 0.5),text = element_text(size = 15))+ ylim(0,1)+ xlim(0,0.3)
 }
 
@@ -36,7 +36,7 @@ for(j in 1:2){
                      method = c(rep('jointGHS', n.jointGHS), rep('SSJGL', n.SSJGL),rep('JGL', n.JGL),rep('GemBag', n.gembag)))
   df.40 = df.40 %>% filter(recall <= max(res.ROC.jointGHS[[3]]$mean.recalls[j,])+0.01)
   plots.40[[j]] = ggplot(df.40, aes(x=recall, y=precision, color=method, linetype=method))+geom_line(data= df.40 %>% filter(method %in% c('jointGHS','SSJGL','JGL')),linewidth=1)+
-    geom_point(data= df.40 %>% filter(method %in% c('GemBag')), size=2)+ theme_bw()+ scale_color_manual(values=c('azure4',"navyblue","firebrick3","palegreen4"))+
+    geom_point(data= df.40 %>% filter(method %in% c('GemBag')), size=2)+ theme_bw()+ scale_color_manual(values=c('thistle3','lightskyblue3','dodgerblue','darkkhaki'))+
     ggtitle('40% disagreement')+theme(legend.position = 'none',plot.title = element_text(hjust = 0.5),text = element_text(size = 15))+ ylim(0,1)+ xlim(0,0.3)
 }
 
@@ -48,7 +48,7 @@ for(j in 1:2){
                      method = c(rep('jointGHS', n.jointGHS), rep('SSJGL', n.SSJGL),rep('JGL', n.JGL),rep('GemBag', n.gembag)))
   df.60 = df.60 %>% filter(recall <= max(res.ROC.jointGHS[[4]]$mean.recalls[j,])+0.01)
   plots.60[[j]] = ggplot(df.60, aes(x=recall, y=precision, color=method, linetype=method))+geom_line(data= df.60 %>% filter(method %in% c('jointGHS','SSJGL','JGL')),linewidth=1)+
-    geom_point(data= df.60 %>% filter(method %in% c('GemBag')), size=2)+ theme_bw()+ scale_color_manual(values=c('azure4',"navyblue","firebrick3","palegreen4"))+
+    geom_point(data= df.60 %>% filter(method %in% c('GemBag')), size=2)+ theme_bw()+ scale_color_manual(values=c('thistle3','lightskyblue3','dodgerblue','darkkhaki'))+
     ggtitle('60% disagreement')+theme(legend.position = 'none',plot.title = element_text(hjust = 0.5),text = element_text(size = 15))+ ylim(0,1)+ xlim(0,0.3)
 }
 
@@ -60,8 +60,8 @@ for(j in 1:2){
                       method = c(rep('jointGHS', n.jointGHS), rep('SSJGL', n.SSJGL),rep('JGL', n.JGL),rep('GemBag', n.gembag)))
   df.100 = df.100 %>% filter(recall <= max(res.ROC.jointGHS[[6]]$mean.recalls[j,])+0.01)
   plots.100[[j]] = ggplot(df.100, aes(x=recall, y=precision, color=method, linetype=method))+geom_line(data= df.100 %>% filter(method %in% c('jointGHS','SSJGL','JGL')),linewidth=1)+
-    geom_point(data= df.100 %>% filter(method %in% c('GemBag')), size=2)+ theme_bw()+ scale_color_manual(values=c('azure4',"navyblue","firebrick3","palegreen4"))+
-    ggtitle('100% disagreement')+theme(plot.title = element_text(hjust = 0.5),text = element_text(size = 15))+ ylim(0,1)+ xlim(0,0.3)
+    geom_point(data= df.100 %>% filter(method %in% c('GemBag')), size=2)+ theme_bw()+ scale_color_manual(values=c('thistle3','lightskyblue3','dodgerblue','darkkhaki'))+
+    ggtitle('100% disagreement')+theme(plot.title = element_text(hjust = 0.5),text = element_text(size = 15), legend.position = 'bottom')+ ylim(0,1)+ xlim(0,0.3)
 }
 
 get_legend<-function(myggplot){
@@ -72,8 +72,14 @@ get_legend<-function(myggplot){
 }
 legend=get_legend(plots.100[[2]])
 
+layout.mat = matrix(c(1,2,
+                      3,4,
+                      5,5),ncol=2,byrow=T)
+
 pdf(file='extended_simulation_studies/plots/PRC_ROC_curves_g2.pdf',8,6)
-gridExtra::grid.arrange(plots.0[[2]], plots.40[[2]],legend,plots.60[[2]],plots.100[[2]]+theme(legend.position = 'none',plot.title = element_text(hjust = 0.5),text = element_text(size = 15)),ncol=3,widths=c(1,1,0.3))
+#gridExtra::grid.arrange(plots.0[[2]], plots.40[[2]],legend,plots.60[[2]],plots.100[[2]]+theme(legend.position = 'none',plot.title = element_text(hjust = 0.5),text = element_text(size = 15)),ncol=3,widths=c(1,1,0.3))
+gridExtra::grid.arrange(plots.0[[2]], plots.40[[2]],plots.60[[2]],plots.100[[2]]+theme(legend.position = 'none',plot.title = element_text(hjust = 0.5),text = element_text(size = 15)),legend,
+                        layout_matrix=layout.mat,heights=c(1,1,0.2))
 dev.off()
 
 

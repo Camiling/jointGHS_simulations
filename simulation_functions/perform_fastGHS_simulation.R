@@ -22,7 +22,7 @@ source('GHS/GHS.R')
 #' @param N the number of simulations to perform
 #' @param seeds seeds to use in each of the \eqn{N} simulations. A vector of length \eqn{N}. 
 #' @param nCores how many cores should be used
-#' @param ebic.gamma the additional penalty term in the extended BIC criterion for selecting similarity in JoStARS
+#' @param ebic.gamma the additional penalty term in the extended BIC criterion for selecting similarity in stabJGL
 #' @param include.glasso should we perform  the graphical lasso?
 #' @param include.GHS should the Gibbs GHS be performed?
 #' @param include.fastGHS should the ECMGHS be performed?

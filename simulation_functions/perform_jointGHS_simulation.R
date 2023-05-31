@@ -4,6 +4,7 @@ library(tailoredGlasso) # Must be installed from Camiling/tailoredGlasso on gith
 library(huge)
 library(igraph)
 library(JGL)
+library(stabJGL)
 library(ggplot2)
 library(gridExtra)
 library(doParallel)
@@ -31,6 +32,7 @@ source("SSJGL/R/gete.R")
 #' @param include.jointGHS should the jointGHS be performed?
 #' @param include.GHS should single-network GHS be performed?
 #' @param include.SSJGL should we perform SSJGL?
+#' @param include.stabJGL Should stabJGL be included?
 #' @param include.JGL should the joint graphical lasso be included?
 #' @param penalize.diagonal should the diagonal be penalized in the graphical lasso-based methods?
 #' @param verbose logical indicator of printing information at each iteration
@@ -40,7 +42,7 @@ source("SSJGL/R/gete.R")
 #' @param save.edgeagreement should the number of edges the estimates agree on be saved?
 #' @return simulation results, including sparsity, precision, recall and specificity
 perform_jointGHS_simulation = function(K, n.vals, p, N=100, seeds=sample(1:1000,N), nCores = 3, frac.disagreement = 0, method='symmetric', 
-                                       include.jointGHS=TRUE, include.GHS=TRUE, include.SSJGL=TRUE, include.JGL = TRUE, penalize.diagonal=FALSE ,verbose=TRUE, scale=TRUE, 
+                                       include.jointGHS=TRUE, include.GHS=TRUE, include.SSJGL=TRUE, include.stabJGL=FALSE, include.JGL = TRUE, penalize.diagonal=FALSE ,verbose=TRUE, scale=TRUE, 
                                        save.res.jointGHS = FALSE, singleVSjoint=FALSE, save.edgeagreement=F){
  
   res=list()
@@ -65,6 +67,17 @@ perform_jointGHS_simulation = function(K, n.vals, p, N=100, seeds=sample(1:1000,
   res$matrix.distances.ssjgl =  matrix(0,N,K)
   res$edge.agreement.ssjgl = rep(0,K)
   res$n.edges.est.ssjgl =  matrix(0,N,K)
+  
+  # StabJGL results 
+  res$opt.sparsities.stabjgl = matrix(0,N,K)
+  res$precisions.stabjgl =  matrix(0,N,K)
+  res$specificities.stabjgl =  matrix(0,N,K)
+  res$recalls.stabjgl =  matrix(0,N,K)
+  res$matrix.distances.stabjgl =  matrix(0,N,K)
+  res$edge.agreement.stabjgl = rep(0,K)
+  res$n.edges.est.stabjgl =  matrix(0,N,K)
+  res$opt.lambda1.stabjgl = rep(0,N)
+  res$opt.lambda2.stabjgl = rep(0,N)
   
   # JGL results (tuned by AIC)
   res$opt.sparsities.jgl = matrix(0,N,K)
@@ -137,14 +150,32 @@ perform_jointGHS_simulation = function(K, n.vals, p, N=100, seeds=sample(1:1000,
     }
   }
   registerDoParallel(nCores)
-  res.list = foreach (i=1:N) %dopar% {
-    jointGHS_simulation_one_iteration(n.vals=n.vals,cov.matrices=cov.matrices,prec.matrices=prec.matrices,scale=scale,
-                                     include.jointGHS=include.jointGHS, include.GHS=include.GHS, include.SSJGL=include.SSJGL, include.JGL=include.JGL, 
-                                     penalize.diagonal=penalize.diagonal,seed=seeds[i], 
-                                     save.res.jointGHS = save.res.jointGHS,singleVSjoint, save.edgeagreement=save.edgeagreement);
+  if(include.jointGHS | include.GHS | include.SSJGL | include.JGL){
+    res.list = foreach (i=1:N) %dopar% {
+      jointGHS_simulation_one_iteration(n.vals=n.vals,cov.matrices=cov.matrices,prec.matrices=prec.matrices,scale=scale,
+                                        include.jointGHS=include.jointGHS, include.GHS=include.GHS, include.SSJGL=include.SSJGL, include.stabJGL = F,
+                                        include.JGL=include.JGL, penalize.diagonal=penalize.diagonal,seed=seeds[i], 
+                                        save.res.jointGHS = save.res.jointGHS,singleVSjoint, save.edgeagreement=save.edgeagreement,nCores=nCores);
+    }
+    registerDoSEQ()
   }
-  registerDoSEQ()
-  
+  else{
+    res.list = NULL
+  }
+  # Running stabJGL separately in parallel 
+  if(include.stabJGL){
+    res.list.stabJGL = list()
+    for(i in 1:N){
+      res.list.stabJGL[[i]] = tryCatch({jointGHS_simulation_one_iteration(n.vals=n.vals,cov.matrices=cov.matrices,prec.matrices=prec.matrices,scale=scale,
+                                          include.jointGHS=F, include.GHS=F, include.SSJGL=F, include.stabJGL = T,
+                                          include.JGL=F, penalize.diagonal=penalize.diagonal,seed=seeds[i], 
+                                          save.res.jointGHS = save.res.jointGHS,singleVSjoint, save.edgeagreement=save.edgeagreement,
+                                          nCores=nCores)},
+                                       error=function(cond) { return(NULL)})
+    }
+    res.list = c(res.list,res.list.stabJGL)
+  }
+
   # Save results from each replicate
   for(i in 1:N){
     est.tmp = res.list[[i]]
@@ -188,6 +219,20 @@ perform_jointGHS_simulation = function(K, n.vals, p, N=100, seeds=sample(1:1000,
       if(save.edgeagreement){
         res$edge.agreement.ssjgl[i] = est.tmp$edge.agreement.ssjgl
         res$n.edges.est.ssjgl[i,] =  est.tmp$n.edges.est.ssjgl
+      }
+    }
+    # Results from stabJGL
+    if(include.stabJGL){
+      res$opt.sparsities.stabjgl[i,] = est.tmp$opt.sparsities.stabjgl
+      res$matrix.distances.stabjgl[i,] = est.tmp$matrix.distances.stabjgl
+      res$precisions.stabjgl[i,] = est.tmp$precisions.stabjgl
+      res$recalls.stabjgl[i,] = est.tmp$recalls.stabjgl
+      res$specificities.stabjgl[i,] =  est.tmp$specificities.stabjgl 
+      res$opt.lambda1.stabjgl[i] = est.tmp$opt.lambda1.stabjgl
+      res$opt.lambda2.stabjgl[i] = est.tmp$opt.lambda2.stabjgl
+      if(save.edgeagreement){
+        res$edge.agreement.stabjgl[i] = est.tmp$edge.agreement.stabjgl
+        res$n.edges.est.stabjgl[i,] =  est.tmp$n.edges.est.stabjgl
       }
     }
     # Results from ghs
@@ -235,6 +280,20 @@ perform_jointGHS_simulation = function(K, n.vals, p, N=100, seeds=sample(1:1000,
       res$mean.n.edges.est.ssjgl =  colMeans(res$n.edges.est.ssjgl)
     }
   }
+  # Mean results from stabJGL
+  if(include.stabJGL){
+    res$mean.opt.sparsities.stabjgl = colMeans(res$opt.sparsities.stabjgl)
+    res$mean.precisions.stabjgl = colMeans(res$precisions.stabjgl)
+    res$mean.recalls.stabjgl = colMeans(res$recalls.stabjgl)
+    res$mean.specificities.stabjgl =  colMeans(res$specificities.stabjgl)
+    res$mean.matrix.distances.stabjgl = colMeans(res$matrix.distances.stabjgl)
+    res$mean.opt.lambda1.stabjgl = mean(res$opt.lambda1.stabjgl)
+    res$mean.opt.lambda2.stabjgl = mean(res$opt.lambda2.stabjgl)
+    if(save.edgeagreement){
+      res$mean.edge.agreement.stabjgl = mean(res$edge.agreement.stabjgl)
+      res$mean.n.edges.est.stabjgl =  colMeans(res$n.edges.est.stabjgl)
+    }
+  }
   # Mean results from GHS
   if(include.GHS){
     res$mean.opt.sparsities.ghs = colMeans(res$opt.sparsities.ghs)
@@ -252,8 +311,8 @@ perform_jointGHS_simulation = function(K, n.vals, p, N=100, seeds=sample(1:1000,
 
 # Function for performing one iteration -----------------------------------------
 
-jointGHS_simulation_one_iteration = function(n.vals,cov.matrices,prec.matrices,scale,include.jointGHS, include.GHS, include.SSJGL,include.JGL, 
-                                            penalize.diagonal,seed, save.res.jointGHS,singleVSjoint, save.edgeagreement) {
+jointGHS_simulation_one_iteration = function(n.vals,cov.matrices,prec.matrices,scale,include.jointGHS, include.GHS, include.SSJGL,include.stabJGL, include.JGL, 
+                                            penalize.diagonal,seed, save.res.jointGHS,singleVSjoint, save.edgeagreement,nCores) {
   y = list()
   K=length(n.vals)
   p=ncol(prec.matrices[[1]])
@@ -294,6 +353,12 @@ jointGHS_simulation_one_iteration = function(n.vals,cov.matrices,prec.matrices,s
     ssjgl.tmp = SSJGL(Y=y,penalty='fused',lambda0=1, lambda1=lam1,lambda2=lam2, v1 = v1, v0s = v0s, tol.em=1e-4, a=1, b=p, doubly=TRUE, normalize=TRUE)
     ssjgl.tmp = ssjgl.tmp$thetalist[[10]]
   }
+  if(include.stabJGL){
+      stabjgl.tmp = stabJGL::stabJGL(Y=y,var.thresh = 0.03,subsample.ratio = NULL,rep.num = 20,penalize.diagonal=F,scale=T,
+                                     nlambda1=20,lambda1.min=0.01,lambda1.max=1,nlambda2=20,lambda2.min=0,lambda2.max=0.1,lambda2.init=0.01,
+                                     ebic.gamma=0,verbose=F,parallelize = T,nCores=nCores)
+    registerDoSEQ()
+  }
   if(include.JGL){
     jgl.tmp = JGL_select_AIC(Y=y,penalty='fused',nlambda1=10,lambda1.min=0.01,lambda1.max=1,nlambda2=10,lambda2.min=0,lambda2.max=0.1,lambda2.init=0.01,
                              penalize.diagonal=penalize.diagonal)
@@ -333,6 +398,21 @@ jointGHS_simulation_one_iteration = function(n.vals,cov.matrices,prec.matrices,s
       est$n.edges.est.ssjgl =  sapply(1:K,FUN=function(k) (sum(abs(ssjgl.tmp[[k]])>1e-5)-p)/2)
     }
   }
+  # Results from stabJGL
+  if(include.stabJGL){
+    est$opt.sparsities.stabjgl  = stabjgl.tmp$opt.sparsities
+    est$opt.lambda1.stabjgl = stabjgl.tmp$opt.lambda1
+    est$opt.lambda2.stabjgl = stabjgl.tmp$opt.lambda2
+    stabjgl.tmp = lapply(stabjgl.tmp$opt.fit, cov2cor)
+    est$matrix.distances.stabjgl = sapply(1:K,FUN=function(k) matrix.distance(prec.matrices[[k]], stabjgl.tmp[[k]]))
+    est$precisions.stabjgl = sapply(1:K,FUN=function(k) precision(prec.matrices[[k]]!=0, stabjgl.tmp[[k]]!=0))
+    est$recalls.stabjgl = sapply(1:K,FUN=function(k) recall(prec.matrices[[k]]!=0, stabjgl.tmp[[k]]!=0))
+    est$specificities.stabjgl = sapply(1:K,FUN=function(k) specificity(prec.matrices[[k]]!=0, stabjgl.tmp[[k]]!=0))
+    if(save.edgeagreement){
+      est$edge.agreement.stabjgl = (sum(apply(simplify2array(stabjgl.tmp), c(1,2), FUN = function(m) sum(abs(m)>1e-5))==K)-p)/2 # How many edges common to all K nets?
+      est$n.edges.est.stabjgl =  sapply(1:K,FUN=function(k) (sum(abs(stabjgl.tmp[[k]])>1e-5)-p)/2)
+    }
+  }
   # Results from JGL
   if(include.JGL){
     est$opt.sparsities.jgl = jgl.tmp$opt.sparsities
@@ -356,7 +436,7 @@ jointGHS_simulation_one_iteration = function(n.vals,cov.matrices,prec.matrices,s
   return(est)
 }
 
-print_edgeDisagreement_jointGHS = function(obj.list,fracs.mutated){
+print_edgeDisagreement_jointGHS = function(obj.list,fracs.mutated,include.stabJGL=F){
   # obj is a list of objects returned by perform_jointGHS_simulation.
   # fracs.mutated is a vector of the mutated fraction in each simulation object
   # show.distance: should the matrix distance be printed?
@@ -374,6 +454,10 @@ print_edgeDisagreement_jointGHS = function(obj.list,fracs.mutated){
     cat(round((1-2*obj$mean.edge.agreement.ssjgl/ (sum(obj$mean.n.edges.est.ssjgl)))*100), '\n')
     cat('jointGHS: ')  
     cat(round((1-2*obj$mean.edge.agreement/ (sum(obj$mean.n.edges.est)))*100), '\n')
+    if(include.stabJGL){
+      cat('stabJGL: ')  
+      cat(round((1-2*obj$mean.edge.agreement.stabjgl/ (sum(obj$mean.n.edges.est.stabjgl)))*100), '\n')
+    }
   }
 }
 

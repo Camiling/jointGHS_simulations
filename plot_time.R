@@ -23,7 +23,7 @@ ggplot2::ggplot(df.time, aes(y=time, x=p, group=method))+ labs(title=" ")+theme_
   labs(y="CPU time (s)")+ scale_x_continuous(breaks = p)+ scale_y_continuous(breaks = seq(0,60,by=10))
 dev.off()
 
-pdf(file='plots/time_small_log.pdf',8,8)
+pdf(file='plots/time_small_log.pdf',5,4)
 ggplot2::ggplot(df.time, aes(y=time, x=p, group=method))+ labs(title=" ")+theme_bw()+theme(plot.title = element_text(hjust = 0.5),text = element_text(size = 15))+
   geom_line(aes(colour=method, linetype=method), size=1)+ scale_color_manual(values=c("azure4", "darkgray"))+
   labs(y="CPU time (s)")+ scale_x_continuous(breaks = p)+scale_y_continuous(trans='log10',breaks = c(0,1,5,25,100))

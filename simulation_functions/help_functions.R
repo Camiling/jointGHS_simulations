@@ -266,8 +266,8 @@ matrix.distance <- function(mat1, mat2) {
 }
 
 
-print_results_jointGHS = function(obj.list,fracs.mutated, include.jointGHS=TRUE, include.GHS=TRUE, include.SSJGL=TRUE, include.JGL=TRUE, show.distance=F, show.interval=F, show.sd = F, 
-                             show.specificity=F, collapse.values =F ){
+print_results_jointGHS = function(obj.list,fracs.mutated, include.jointGHS=TRUE, include.GHS=TRUE, include.SSJGL=TRUE, include.JGL=TRUE,include.stabJGL=FALSE,show.distance=F, show.interval=F, show.sd = F, 
+                             show.specificity=F, collapse.values =F, show.edgedisagreement=F){
   # obj is a list of objects returned by perform_jointGHS_simulation.
   # fracs.mutated is a vector of the mutated fraction in each simulation object
   # show.distance: should the matrix distance be printed?
@@ -282,7 +282,8 @@ print_results_jointGHS = function(obj.list,fracs.mutated, include.jointGHS=TRUE,
   }
   else if(show.sd==T){
     print_results_jointGHS_show_SD(obj.list,fracs.mutated=fracs.mutated,include.jointGHS=include.jointGHS, include.JGL=include.JGL,include.GHS=include.GHS, 
-                                   include.SSJGL=include.SSJGL,show.distance=show.distance, show.specificity=show.specificity)
+                                   include.SSJGL=include.SSJGL,include.stabJGL=include.stabJGL,show.distance=show.distance, show.specificity=show.specificity,
+                                   show.edgedisagreement= show.edgedisagreement)
   }
   else{
     K = length(obj.list[[1]]$mean.opt.sparsities)
@@ -392,7 +393,7 @@ print_results_jointGHS = function(obj.list,fracs.mutated, include.jointGHS=TRUE,
   }
 }
 
-print_results_jointGHS_show_SD = function(obj.list,fracs.mutated, include.jointGHS=TRUE, include.GHS=TRUE, include.SSJGL=TRUE, include.JGL=TRUE,show.distance=F,show.specificity=F, show.edgedisagreement=F){
+print_results_jointGHS_show_SD = function(obj.list,fracs.mutated, include.jointGHS=TRUE, include.GHS=TRUE, include.SSJGL=TRUE, include.JGL=TRUE,include.stabJGL=FALSE,show.distance=F,show.specificity=F, show.edgedisagreement=F){
   # obj is a list of objects returned by perform_jointGHS_simulation.
   # fracs.mutated is a vector of the mutated fraction in each simulation object
   # show.distance: should the matrix distance be printed?
@@ -440,6 +441,20 @@ print_results_jointGHS_show_SD = function(obj.list,fracs.mutated, include.jointG
             round(obj$mean.recalls.ssjgl[k],2),'(',round(sd(obj$recalls.ssjgl[,k]),2),')')
         if(show.specificity)cat('&',round(obj$mean.specificities.ssjgl[k],2), '(',round(sd(obj$specificities.ssjgl[,k]),2),')') 
         if(show.distance) cat(' & ',round(obj$mean.matrix.distances.ssjgl[k],3))
+      }  
+      cat(' \\\\ \n')
+    }
+    if(include.stabJGL){
+      cat('  & stabJGL ')  
+      if(show.edgedisagreement){
+        cat('&', round((1-2*obj$mean.edge.agreement.stabjgl/ (sum(obj$mean.n.edges.est.stabjgl)))*100))
+      }
+      for(k in 1:K){
+        cat(' && ',round(obj$mean.opt.sparsities.stabjgl[k],3), '(',round(sd(obj$opt.sparsities.stabjgl[,k]),3),')',' & ',
+            round(obj$mean.precisions.stabjgl[k],2),'(',round(sd(obj$precisions.stabjgl[,k]),2),')',' & ',
+            round(obj$mean.recalls.stabjgl[k],2),'(',round(sd(obj$recalls.stabjgl[,k]),2),')')
+        if(show.specificity)cat('&',round(obj$mean.specificities.stabjgl[k],2), '(',round(sd(obj$specificities.stabjgl[,k]),2),')') 
+        if(show.distance) cat(' & ',round(obj$mean.matrix.distances.stabjgl[k],3))
       }  
       cat(' \\\\ \n')
     }

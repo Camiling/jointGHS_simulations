@@ -30,21 +30,22 @@ df.time$K=c(rep('K=2', n.p*4),rep('K=3', n.p*4),rep('K=4', n.p*4))
 
 pdf(file='extended_simulation_studies/plots/time_joint.pdf',8,4)
 ggplot2::ggplot(df.time, aes(y=time, x=p, group=method))+ labs(title=" ")+theme_bw()+theme(plot.title = element_text(hjust = 0.5),text = element_text(size = 15))+
-  geom_line(aes(colour=method, linetype=method), size=1)+ scale_color_manual(values=c("azure4", "navyblue","firebrick3","palegreen4"))+
+  geom_line(aes(colour=method, linetype=method), linewidth=1)+ scale_color_manual(values=c("azure4", "navyblue","firebrick3","palegreen4"))+
   labs(y="CPU time (s)")+ scale_x_continuous(breaks = p) +facet_wrap(~K) #+ scale_y_continuous(breaks = seq(0,60,by=10))
 dev.off()
 
+#pdf(file='extended_simulation_studies/plots/time_joint_log.pdf',8,4)
+#ggplot2::ggplot(df.time, aes(y=time, x=p, group=method))+ labs(title=" ")+theme_bw()+theme(plot.title = element_text(hjust = 0.5),text = element_text(size = 15))+
+#  geom_line(aes(colour=method, linetype=method), linewidth=1)+ scale_color_manual(values=c("azure4", "navyblue","firebrick3","palegreen4"))+
+#  labs(y="CPU time (s)")+ scale_x_continuous(breaks = p)+scale_y_continuous(trans='log10',breaks = c(0,5, 50,500,5000,50000))+facet_wrap(~K)
+#dev.off()
+
+
 pdf(file='extended_simulation_studies/plots/time_joint_log.pdf',8,4)
 ggplot2::ggplot(df.time, aes(y=time, x=p, group=method))+ labs(title=" ")+theme_bw()+theme(plot.title = element_text(hjust = 0.5),text = element_text(size = 15))+
-  geom_line(aes(colour=method, linetype=method), linewidth=1)+ scale_color_manual(values=c("azure4", "navyblue","firebrick3","palegreen4"))+
+  geom_line(aes(colour=method, linetype=method), linewidth=1)+ scale_color_manual(values=c('thistle3','lightskyblue3','dodgerblue','darkkhaki'))+
   labs(y="CPU time (s)")+ scale_x_continuous(breaks = p)+scale_y_continuous(trans='log10',breaks = c(0,5, 50,500,5000,50000))+facet_wrap(~K)
 dev.off()
-
-
-
-
-
-
 
 
 
