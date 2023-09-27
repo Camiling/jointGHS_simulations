@@ -33,7 +33,7 @@ source('GHS/GHS.R')
 #' @return simulation results, including sparsity, precision, recall and specificity
 perform_fastGHS_simulation = function(n, p, N=100, seeds=sample(1:1000,N), nCores = 3, ebic.gamma = 0.2,
                                        include.glasso = TRUE, include.GHS=TRUE, include.fastGHS=TRUE,
-                                       stars.thresh=0.03,penalize.diagonal=FALSE ,verbose=TRUE, scale=TRUE){
+                                       stars.thresh=0.03,penalize.diagonal=FALSE ,verbose=TRUE, scale=TRUE, theta.init=T,save_Q=F){
   
   res=list()
   # Glasso results
@@ -59,6 +59,9 @@ perform_fastGHS_simulation = function(n, p, N=100, seeds=sample(1:1000,N), nCore
     res$specificities.fastghs =  rep(0,N)
     res$recalls.fastghs =  rep(0,N)
     res$matrix.distances.fastghs = rep(0,N)
+    if(save_Q){
+      res$Q_vals = list()
+    }
   }
   
   # Generate the precision matrix
@@ -82,7 +85,7 @@ perform_fastGHS_simulation = function(n, p, N=100, seeds=sample(1:1000,N), nCore
   res.list = foreach (i=1:N) %dopar% {
     jointGHS_simulation_one_iteration(n=n,cov.mat=cov.mat,prec.mat=prec.mat,scale=scale,
                                       ebic.gamma=ebic.gamma,include.glasso=include.glasso, include.GHS=include.GHS, include.fastGHS=include.fastGHS, 
-                                      stars.thresh=stars.thresh,penalize.diagonal=penalize.diagonal,seed=seeds[i]);
+                                      stars.thresh=stars.thresh,penalize.diagonal=penalize.diagonal,seed=seeds[i],theta.init=theta.init,save_Q=save_Q);
   }
   registerDoSEQ()
   # Save results from each replicate
@@ -103,6 +106,9 @@ perform_fastGHS_simulation = function(n, p, N=100, seeds=sample(1:1000,N), nCore
       res$precisions.fastghs[i] = est.tmp$precisions.fastghs
       res$recalls.fastghs[i] = est.tmp$recalls.fastghs
       res$specificities.fastghs[i] =  est.tmp$specificities.fastghs
+      if(save_Q){
+        res$Q_vals[[i]] = est.tmp$Q_vals 
+      }
     }
     # Results from glasso
     if(include.glasso){
@@ -146,7 +152,7 @@ perform_fastGHS_simulation = function(n, p, N=100, seeds=sample(1:1000,N), nCore
 # Function for performing one iteration -----------------------------------------
 
 jointGHS_simulation_one_iteration = function(n,cov.mat,prec.mat,scale,ebic.gamma,include.glasso,include.GHS, include.fastGHS, 
-                                             stars.thresh, penalize.diagonal,seed) {
+                                             stars.thresh, penalize.diagonal,seed,theta.init=F,save_Q=F) {
   p=ncol(prec.mat)
   set.seed(seed)
   # Generate data. 
@@ -158,8 +164,22 @@ jointGHS_simulation_one_iteration = function(n,cov.mat,prec.mat,scale,ebic.gamma
   glasso.res = huge.select(glasso.tmp,criterion='stars', stars.thresh = stars.thresh, verbose = F)    
   }
   if(include.fastGHS){
-    fastghs.res = fastGHS::fastGHS(X=y, AIC_selection = T, AIC_eps = 0.1, epsilon = 1e-3, verbose=FALSE)$theta
-    fastghs.res[which(abs(fastghs.res)<1e-5, arr.ind=T)] = 0
+    if(theta.init){
+      huge.init.random = huge.generator(n,p,graph='scale-free',verbose = F,v=0.5,u=0.05)
+      theta.init.random = cov2cor(huge.init.random$omega)
+      if(!matrixcalc::is.symmetric.matrix(theta.init.random)){
+        theta.init.random = round(theta.init.random,8)
+      }
+      fastghs.res = fastGHS::fastGHS(X=y, AIC_selection = T, AIC_eps = 0.1, epsilon = 1e-3, verbose=FALSE, theta=theta.init.random,save_Q=save_Q)
+      Q_vals = c(fastghs.res$Q_vals)
+      fastghs.res = fastghs.res$theta
+      fastghs.res[which(abs(fastghs.res)<1e-5, arr.ind=T)] = 0
+    }
+    else{
+      fastghs.res = fastGHS::fastGHS(X=y, AIC_selection = T, AIC_eps = 0.1, epsilon = 1e-3, verbose=FALSE)$theta
+      fastghs.res[which(abs(fastghs.res)<1e-5, arr.ind=T)] = 0     
+    }
+
   }
   if(include.GHS){
     invalid=T
@@ -195,6 +215,9 @@ jointGHS_simulation_one_iteration = function(n,cov.mat,prec.mat,scale,ebic.gamma
     est$precisions.fastghs = precision(prec.mat!=0, fastghs.res!=0)
     est$recalls.fastghs = recall(prec.mat!=0, fastghs.res!=0)
     est$specificities.fastghs =  specificity(prec.mat!=0, fastghs.res!=0)
+    if(save_Q){
+      est$Q_vals = Q_vals
+    }
   }
   # Results from glasso
   if(include.glasso){
