@@ -135,11 +135,12 @@ df.plot.2 = data.frame(theta=c(theta.offdiag.1, theta.offdiag.2), Lambda_sq = c(
                        truth = factor(rep(truth.all, 2)),estimate= factor(c(rep(1,length(theta.offdiag.1)), rep(2,length(theta.offdiag.2)))))
   
 p.lambda = ggplot2::ggplot(df.plot.2, aes(y=Lambda_sq,x=NuInv))+ labs(title=" ")+theme(plot.title = element_text(hjust = 0.5))+
-  geom_point(aes(colour=estimate, shape=truth)) + scale_color_manual(values=c("darkorange", "darkturquoise"))+ 
-  geom_hline(yintercept=0, linetype='dashed', color='darkgrey') + geom_vline(xintercept=0,linetype='dashed', color='darkgrey')                     
+  geom_point(aes(colour=estimate, shape=truth)) + scale_color_manual(values=c("white", "darkturquoise"))+ 
+  geom_hline(yintercept=0, linetype='dashed', color='darkgrey') + geom_vline(xintercept=0,linetype='dashed', color='darkgrey') 
+
 p.theta = ggplot2::ggplot(df.plot.2, aes(y=theta,x=NuInv))+ labs(title=" ")+theme_bw()+theme(plot.title = element_text(hjust = 0.5),text = element_text(size = 17))+
-  geom_point(aes(colour=estimate, shape=truth), size=3)+ scale_color_manual(values=c("darkorange", "darkturquoise")) + 
-  geom_hline(yintercept=0, linetype='dashed', color='darkgrey') + geom_vline(xintercept=0,linetype='dashed', color='darkgrey')+xlab('E[NuInv]')              
+  geom_point(aes(colour=estimate, shape=truth),size=3)+ scale_colour_manual(values=c("lightgray", "blue4")) + 
+  geom_hline(yintercept=0, linetype='dashed', color='darkgrey') + geom_vline(xintercept=0,linetype='dashed', color='darkgrey')+xlab('E[NuInv]')
 
 pdf('plots/Theta_vs_NuInvJointGHS.pdf',8,7)
 p.theta
