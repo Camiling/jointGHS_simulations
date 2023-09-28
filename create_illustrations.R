@@ -140,7 +140,8 @@ p.lambda = ggplot2::ggplot(df.plot.2, aes(y=Lambda_sq,x=NuInv))+ labs(title=" ")
 
 p.theta = ggplot2::ggplot(df.plot.2, aes(y=theta,x=NuInv))+ labs(title=" ")+theme_bw()+theme(plot.title = element_text(hjust = 0.5),text = element_text(size = 17))+
   geom_point(aes(colour=estimate, shape=truth),size=3)+ scale_colour_manual(values=c("lightgray", "blue4")) + 
-  geom_hline(yintercept=0, linetype='dashed', color='darkgrey') + geom_vline(xintercept=0,linetype='dashed', color='darkgrey')+xlab('E[NuInv]')
+  geom_hline(yintercept=0, linetype='dashed', color='darkgrey') + geom_vline(xintercept=0,linetype='dashed', color='darkgrey')+xlab('E[NuInv]')+
+  geom_point(shape = 1,size = 3,colour = "black")
 
 pdf('plots/Theta_vs_NuInvJointGHS.pdf',8,7)
 p.theta
